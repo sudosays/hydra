@@ -7,11 +7,24 @@ import (
 	"os"
 )
 
+type UIMode int
+
+const (
+	Navigate UIMode = iota
+	Input
+)
+
+type Cursor struct {
+	X, Y int
+}
+
 type PneumaUI struct {
-	Screen           tcell.Screen
-	cursorX, cursorY int
-	Exit             bool
-	Style            tcell.Style
+	Screen      tcell.Screen
+	Cursor      Cursor
+	Exit        bool
+	Style       tcell.Style
+	Mode        UIMode
+	InputBuffer string
 }
 
 func check(e error) {
@@ -27,12 +40,20 @@ func Init() PneumaUI {
 	check(err)
 	screen.Clear()
 	ui := PneumaUI{
-		Screen:  screen,
-		cursorX: 0,
-		cursorY: 0,
-		Exit:    false,
+		Screen: screen,
+		Cursor: Cursor{0, 0},
+		Exit:   false,
+		Mode:   Navigate,
 	}
 	return ui
+}
+
+func (ui *PneumaUI) Reset() {
+	ui.Screen.Clear()
+	ui.Screen.Sync()
+	ui.Cursor = Cursor{0, 0}
+	ui.Mode = Navigate
+	ui.InputBuffer = ""
 }
 
 func (ui PneumaUI) Close() {
@@ -41,16 +62,30 @@ func (ui PneumaUI) Close() {
 	ui.Exit = true
 }
 
-func (ui PneumaUI) Tick() {
+func (ui *PneumaUI) Tick() {
 	ui.Screen.Sync()
 	switch ev := ui.Screen.PollEvent().(type) {
 	case *tcell.EventKey:
-		if ev.Key() == tcell.KeyRune {
-			if ev.Rune() == 'q' {
-				ui.Close()
+		if ui.Mode == Navigate {
+			if ev.Key() == tcell.KeyRune {
+				switch ev.Rune() {
+				case 'q':
+					ui.Close()
+				case 'i':
+					ui.Mode = Input
+				}
+			}
+		} else {
+			if ev.Key() == tcell.KeyEnter {
+				ui.Mode = Navigate
+			} else if ev.Key() == tcell.KeyRune {
+				ui.InputBuffer += string(ev.Rune())
+				ui.PutRune(ev.Rune())
+				ui.Cursor.X++
 			}
 		}
 	}
+	ui.drawFooter()
 }
 
 func (ui *PneumaUI) MoveCursor(x, y int) error {
@@ -59,19 +94,19 @@ func (ui *PneumaUI) MoveCursor(x, y int) error {
 		return errors.New("PneumaUI: cursor out of bounds.")
 	}
 
-	ui.cursorX = x
-	ui.cursorY = y
+	ui.Cursor.X = x
+	ui.Cursor.Y = y
 	return nil
 }
 
 func (ui PneumaUI) PutRune(r rune) {
-	ui.Screen.SetContent(ui.cursorX, ui.cursorY, r, []rune{}, tcell.StyleDefault)
+	ui.Screen.SetContent(ui.Cursor.X, ui.Cursor.Y, r, []rune{}, tcell.StyleDefault)
 }
 
 func (ui PneumaUI) PutStr(str string) {
 	for _, c := range str {
 		ui.PutRune(rune(c))
-		ui.cursorX++
+		ui.Cursor.X++
 	}
 }
 
@@ -79,14 +114,24 @@ func (ui PneumaUI) PrintList(list []string) {
 	for num, item := range list {
 		outStr := fmt.Sprintf("%d) %s", num+1, item)
 		ui.PutStr(outStr)
-		ui.cursorY++
+		ui.Cursor.Y++
 	}
 }
 
-func (ui PneumaUI) ShowFooter(content string) {
-	cursorYPos := ui.cursorY
+func (ui PneumaUI) drawFooter() {
+	var footerContent string
+	switch ui.Mode {
+	case Navigate:
+		footerContent = "Q: quit, I: insert"
+	case Input:
+		footerContent = "INPUT             "
+	}
+	cursorYPos := ui.Cursor.Y
+	cursorXPos := ui.Cursor.X
 	_, h := ui.Screen.Size()
-	ui.cursorY = h - 1
-	ui.PutStr(content)
-	ui.cursorY = cursorYPos
+	ui.Cursor.Y = h - 1
+	ui.Cursor.X = 0
+	ui.PutStr(footerContent)
+	ui.Cursor.Y = cursorYPos
+	ui.Cursor.X = cursorXPos
 }

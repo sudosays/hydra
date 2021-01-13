@@ -82,7 +82,6 @@ func main() {
 	ui.PrintList(sitesList)
 	ui.MoveCursor(0, 3+len(sitesList))
 	ui.PutStr(fmt.Sprintf("Please choose a site (default=1): "))
-	ui.ShowFooter("Q: quit")
 
 	for {
 		ui.Tick()
