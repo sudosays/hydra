@@ -1,24 +1,18 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/gdamore/tcell/v2"
+	libui "github.com/sudosays/pneuma/internal/ui"
+	"github.com/sudosays/pneuma/pkg/data/hugo"
 	"io"
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 )
 
 type Site struct {
 	Name, Path string
-}
-
-type Post struct {
-	Title, Date, Path string
-	Draft             bool
 }
 
 func check(e error) {
@@ -27,7 +21,7 @@ func check(e error) {
 	}
 }
 
-func printPosts(posts []Post) {
+func printPosts(posts []hugo.Post) {
 	for _, p := range posts {
 		indicator := ""
 		if p.Draft {
@@ -55,44 +49,6 @@ func readConfig(path string) []Site {
 	return sites
 }
 
-func hugoConfig() string {
-	s := ""
-	hugoConfigCmd := exec.Command("hugo", "config")
-	hugoConfig, err := hugoConfigCmd.Output()
-	s = string(hugoConfig)
-	check(err)
-
-	return s
-}
-
-func hugoGetPosts() []Post {
-	var posts []Post
-	hugoListCmd := exec.Command("hugo", "list", "all")
-	rawPostList, err := hugoListCmd.Output()
-	csvReader := csv.NewReader(strings.NewReader(string(rawPostList)))
-	isHeader := true
-	for {
-		record, err := csvReader.Read()
-		if err == io.EOF {
-			break
-		} else {
-			if isHeader {
-				isHeader = !isHeader
-				continue
-			} else {
-				post := Post{Path: record[0],
-					Date:  record[3],
-					Title: record[2],
-					Draft: (record[6] == "true"),
-				}
-				posts = append(posts, post)
-			}
-		}
-	}
-	check(err)
-	return posts
-}
-
 func startEditor(path string) {
 	editorCmd := exec.Command("vim", path)
 	editorCmd.Stdin = os.Stdin
@@ -108,90 +64,28 @@ func main() {
 	os.Chdir(home)
 	cwd, err := os.Getwd()
 	check(err)
-	screen := initScreen()
+
 	sites := readConfig(configPath)
-	line := 0
-	putStr(0, line, screen, fmt.Sprintf("Current working dir: %s", cwd))
-	line++
-	putStr(0, line, screen, fmt.Sprintf("Config path: %s", configPath))
-	line++
-	putStr(0, line, screen, fmt.Sprintf("Sites from config:"))
-	line++
-	showSiteList(0, line, screen, sites)
-	line += len(sites)
-	putStr(0, line, screen, fmt.Sprintf("Please choose a site (default=1): "))
-	choice := 0
-	var posts []Post
-	if choice < len(sites) {
-		os.Chdir(sites[choice].Path)
-		//siteDir, err := os.Getwd()
-		check(err)
-		//siteConfig := hugoConfig()
-		//fmt.Println(siteConfig)
-		posts = hugoGetPosts()
-		//printPosts(posts)
-		//startEditor(posts[0].Path)
+
+	ui := libui.Init()
+	ui.MoveCursor(0, 0)
+	ui.PutStr(fmt.Sprintf("Current working dir: %s", cwd))
+	ui.MoveCursor(0, 1)
+	ui.PutStr(fmt.Sprintf("Config path: %s", configPath))
+	ui.MoveCursor(0, 2)
+	ui.PutStr(fmt.Sprintf("Sites from config:"))
+	var sitesList []string
+	for _, site := range sites {
+		sitesList = append(sitesList, site.Name)
 	}
-	var postList []string
-	for _, p := range posts {
-		indicator := ""
-		if p.Draft {
-			indicator = "*"
-		}
-		postList = append(postList, fmt.Sprintf("%s%s\n", indicator, p.Title))
-	}
+	ui.MoveCursor(0, 3)
+	ui.PrintList(sitesList)
+	ui.MoveCursor(0, 3+len(sitesList))
+	ui.PutStr(fmt.Sprintf("Please choose a site (default=1): "))
+	ui.ShowFooter("Q: quit")
 
 	for {
-		printList(0, line+1, screen, postList)
-		screen.Sync()
-		switch ev := screen.PollEvent().(type) {
-		case *tcell.EventKey:
-			if ev.Key() == tcell.KeyRune {
-				if ev.Rune() == 'q' {
-					screen.Fini()
-					os.Exit(0)
-				}
-			}
-		}
-
+		ui.Tick()
 	}
-}
 
-func putRune(x, y int, s tcell.Screen, r rune) {
-	s.SetContent(x, y, r, []rune{}, tcell.StyleDefault)
-}
-
-func putStr(x, y int, s tcell.Screen, str string) {
-	for _, c := range str {
-		putRune(x, y, s, rune(c))
-		x++
-	}
-}
-
-func printList(x, y int, s tcell.Screen, list []string) {
-	for num, item := range list {
-		outStr := fmt.Sprintf("%d) %s", num+1, item)
-		putStr(x, y, s, outStr)
-		y++
-	}
-}
-
-func initScreen() tcell.Screen {
-	screen, err := tcell.NewScreen()
-	check(err)
-	err = screen.Init()
-	check(err)
-	screen.Clear()
-	return screen
-}
-
-func showSiteList(x, y int, screen tcell.Screen, sites []Site) {
-	line := y
-	var siteList []string
-	if len(sites) > 0 {
-		for _, s := range sites {
-			siteList = append(siteList, s.Name)
-		}
-	}
-	printList(0, line, screen, siteList)
 }
