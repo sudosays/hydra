@@ -3,9 +3,15 @@ package hugo
 import (
 	"encoding/csv"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 )
+
+type Blog struct {
+	Title string
+	Posts []Post
+}
 
 type Post struct {
 	Title, Date, Path string
@@ -28,7 +34,12 @@ func Config() string {
 	return s
 }
 
-func Posts() []Post {
+func Load(path string) Blog {
+	os.Chdir(path)
+	return Blog{Title: "blog", Posts: loadPosts()}
+}
+
+func loadPosts() []Post {
 	var posts []Post
 	hugoListCmd := exec.Command("hugo", "list", "all")
 	rawPostList, err := hugoListCmd.Output()
