@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"os"
+	"strings"
 )
 
 type UIMode int
@@ -62,7 +63,19 @@ func (ui PneumaUI) Close() {
 	ui.Exit = true
 }
 
+func (ui *PneumaUI) WaitForInput() string {
+	ui.Mode = Input
+	for {
+		ui.Tick()
+		if ui.Mode == Navigate {
+			break
+		}
+	}
+	return ui.InputBuffer
+}
+
 func (ui *PneumaUI) Tick() {
+	ui.drawFooter()
 	ui.Screen.Sync()
 	switch ev := ui.Screen.PollEvent().(type) {
 	case *tcell.EventKey:
@@ -85,7 +98,6 @@ func (ui *PneumaUI) Tick() {
 			}
 		}
 	}
-	ui.drawFooter()
 }
 
 func (ui *PneumaUI) MoveCursor(x, y int) error {
@@ -124,14 +136,27 @@ func (ui PneumaUI) drawFooter() {
 	case Navigate:
 		footerContent = "Q: quit, I: insert"
 	case Input:
-		footerContent = "INPUT             "
+		footerContent = "INPUT"
 	}
 	cursorYPos := ui.Cursor.Y
 	cursorXPos := ui.Cursor.X
-	_, h := ui.Screen.Size()
-	ui.Cursor.Y = h - 1
+	w, h := ui.Screen.Size()
+
+	ui.hLine(h - 2)
+
+	ui.Cursor.Y = h - 2
 	ui.Cursor.X = 0
-	ui.PutStr(footerContent)
+	ui.Cursor.Y = h - 1
+	ui.PutStr(fmt.Sprintf("%-*s", w, footerContent))
 	ui.Cursor.Y = cursorYPos
 	ui.Cursor.X = cursorXPos
+}
+
+func (ui *PneumaUI) hLine(y int) {
+	oldCursorPos := ui.Cursor
+	w, _ := ui.Screen.Size()
+	ui.MoveCursor(0, y)
+	line := strings.Repeat("─", w)
+	ui.PutStr(line)
+	ui.Cursor = oldCursorPos
 }
