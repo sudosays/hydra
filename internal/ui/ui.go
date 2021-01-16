@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"os"
-	"strings"
+	//"strings"
 )
 
 type UIMode int
@@ -74,6 +74,11 @@ func (ui *PneumaUI) WaitForInput() string {
 	return ui.InputBuffer
 }
 
+func (ui *PneumaUI) WaitForCommand() string {
+	cmd := "nop"
+	return cmd
+}
+
 func (ui *PneumaUI) Tick() {
 	ui.drawFooter()
 	ui.Screen.Sync()
@@ -89,7 +94,7 @@ func (ui *PneumaUI) Tick() {
 				}
 			}
 		} else {
-			if ev.Key() == tcell.KeyEnter {
+			if ev.Key() == tcell.KeyEnter || ev.Key() == tcell.KeyEscape {
 				ui.Mode = Navigate
 			} else if ev.Key() == tcell.KeyRune {
 				ui.InputBuffer += string(ev.Rune())
@@ -115,7 +120,7 @@ func (ui PneumaUI) PutRune(r rune) {
 	ui.Screen.SetContent(ui.Cursor.X, ui.Cursor.Y, r, []rune{}, tcell.StyleDefault)
 }
 
-func (ui PneumaUI) PutStr(str string) {
+func (ui *PneumaUI) PutStr(str string) {
 	for _, c := range str {
 		ui.PutRune(rune(c))
 		ui.Cursor.X++
@@ -124,7 +129,7 @@ func (ui PneumaUI) PutStr(str string) {
 
 func (ui PneumaUI) PrintList(list []string) {
 	for num, item := range list {
-		outStr := fmt.Sprintf("%d) %s", num+1, item)
+		outStr := fmt.Sprintf("%2d) %s", num+1, item)
 		ui.PutStr(outStr)
 		ui.Cursor.Y++
 	}
@@ -142,7 +147,7 @@ func (ui PneumaUI) drawFooter() {
 	cursorXPos := ui.Cursor.X
 	w, h := ui.Screen.Size()
 
-	ui.hLine(h - 2)
+	ui.HLine(0, w, h-2)
 
 	ui.Cursor.Y = h - 2
 	ui.Cursor.X = 0
@@ -152,11 +157,32 @@ func (ui PneumaUI) drawFooter() {
 	ui.Cursor.X = cursorXPos
 }
 
-func (ui *PneumaUI) hLine(y int) {
+func (ui *PneumaUI) HLine(startX, endX, y int) {
 	oldCursorPos := ui.Cursor
-	w, _ := ui.Screen.Size()
-	ui.MoveCursor(0, y)
-	line := strings.Repeat("─", w)
-	ui.PutStr(line)
+	for x := startX; x < endX; x++ {
+		ui.MoveCursor(x, y)
+		ui.PutStr("─")
+	}
 	ui.Cursor = oldCursorPos
+}
+
+func (ui *PneumaUI) VLine(startY, endY, x int) {
+	oldCursorPos := ui.Cursor
+	for y := startY; y < endY; y++ {
+		ui.MoveCursor(x, y)
+		ui.PutStr("│")
+
+	}
+	ui.Cursor = oldCursorPos
+}
+
+// Debug function to call specific
+func (ui *PneumaUI) Draw(drawable Drawable) {
+	drawable.Draw(ui)
+}
+
+func (ui *PneumaUI) AddTable(x, y int, content [][]string) *Table {
+	headings := content[0]
+	rows := content[0:]
+	return &Table{X: x, Y: y, Headings: headings, Content: rows}
 }

@@ -22,14 +22,70 @@ func check(e error) {
 	}
 }
 
-func printPosts(posts []hugo.Post) {
-	for _, p := range posts {
-		indicator := ""
-		if p.Draft {
-			indicator = "*"
-		}
-		fmt.Printf("%s%s\n", indicator, p.Title)
+var sites []Site
+var ui libui.PneumaUI
+
+func init() {
+	home, err := os.UserHomeDir()
+	configPath := path.Join(home, ".config", "pneuma.json")
+	check(err)
+	sites = readConfig(configPath)
+	ui = libui.Init()
+
+}
+
+func main() {
+
+	var site hugo.Blog
+	if len(sites) > 1 {
+		site = siteSelect()
+	} else {
+		site = hugo.Load(sites[0].Path)
 	}
+
+	siteOverview(site)
+
+	for {
+		ui.Tick()
+	}
+
+}
+
+func siteSelect() hugo.Blog {
+	ui.Reset()
+	ui.PutStr(fmt.Sprintf("Sites from config:"))
+
+	var sitesList [][]string
+	sitesList = append(sitesList, []string{"Choice", "Name", "Path"})
+	for i, site := range sites {
+		sitesList = append(sitesList, []string{fmt.Sprintf("%d", i+1), site.Name, site.Path})
+	}
+	table := ui.AddTable(0, 2, sitesList)
+	ui.Draw(table)
+	ui.MoveCursor(0, 3+len(sitesList))
+	prompt := "Please choose a site (default=1): "
+	ui.PutStr(prompt)
+	ui.MoveCursor(len(prompt), 3+len(sitesList))
+
+	siteSelect := getSelection(len(sitesList))
+
+	site := hugo.Load(sites[siteSelect].Path)
+	return site
+}
+
+func getSelection(max int) int {
+	selection := 0
+	input := ui.WaitForInput()
+	choice, err := strconv.Atoi(input)
+	if err == nil {
+		choice--
+		if choice > 0 && choice <= max {
+			selection = choice
+		} else {
+			check(err)
+		}
+	}
+	return selection
 }
 
 func readConfig(path string) []Site {
@@ -58,77 +114,29 @@ func startEditor(path string) {
 	check(err)
 }
 
-func main() {
-	home, err := os.UserHomeDir()
-	configPath := path.Join(home, ".config", "pneuma.json")
-	check(err)
-	os.Chdir(home)
-	cwd, err := os.Getwd()
-	check(err)
-
-	sites := readConfig(configPath)
-
-	ui := libui.Init()
-	ui.MoveCursor(0, 0)
-	ui.PutStr(fmt.Sprintf("Current working dir: %s", cwd))
-	ui.MoveCursor(0, 1)
-	ui.PutStr(fmt.Sprintf("Config path: %s", configPath))
-	ui.MoveCursor(0, 2)
-	ui.PutStr(fmt.Sprintf("Sites from config:"))
-	var sitesList []string
-	for _, site := range sites {
-		sitesList = append(sitesList, fmt.Sprintf("%s (%s)", site.Name, site.Path))
-	}
-	ui.MoveCursor(0, 3)
-	ui.PrintList(sitesList)
-	ui.MoveCursor(0, 3+len(sitesList))
-	prompt := "Please choose a site (default=1): "
-	ui.PutStr(prompt)
-	ui.MoveCursor(len(prompt), 3+len(sitesList))
-
-	siteSelect := getSelection(ui, len(sitesList))
-
+func siteOverview(site hugo.Blog) {
 	ui.Reset()
-	site := hugo.Load(sites[siteSelect].Path)
 	posts := site.Posts
-	var postList []string
-	for _, post := range posts {
-		indicator := ""
+	var postList [][]string
+	postList = append(postList, []string{"#", "Date", "Title", "Draft"})
+	for i, post := range posts {
+		draftStatus := "False"
 		if post.Draft {
-			indicator = "*"
+			draftStatus = "True"
 		}
-		postList = append(postList, fmt.Sprintf("%s%s", indicator, post.Title))
+		postList = append(postList, []string{fmt.Sprintf("%d", i+1), post.Date, post.Title, draftStatus})
 	}
 
 	ui.PutStr("Posts from the blog:")
 	ui.MoveCursor(0, 1)
-	ui.PrintList(postList)
+	table := ui.AddTable(0, 1, postList)
+	ui.Draw(table)
 
-	ui.MoveCursor(0, 2+len(postList))
-	prompt = "Select a post to edit: "
+	ui.MoveCursor(0, 3+len(postList))
+	prompt := "Select a post to edit: "
 	ui.PutStr(prompt)
-	ui.MoveCursor(len(prompt), 2+len(postList))
+	ui.MoveCursor(len(prompt), 3+len(postList))
 
-	postNum := getSelection(ui, len(postList))
-	startEditor(path.Join(sites[siteSelect].Path, posts[postNum].Path))
-
-	for {
-		ui.Tick()
-	}
-
-}
-
-func getSelection(ui libui.PneumaUI, max int) int {
-	selection := 0
-	input := ui.WaitForInput()
-	choice, err := strconv.Atoi(input)
-	if err == nil {
-		choice--
-		if choice > 0 && choice <= max {
-			selection = choice
-		} else {
-			check(err)
-		}
-	}
-	return selection
+	postNum := getSelection(len(postList))
+	startEditor(site.Posts[postNum].Path)
 }
