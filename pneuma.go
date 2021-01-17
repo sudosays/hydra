@@ -53,19 +53,19 @@ func main() {
 
 func siteSelect() hugo.Blog {
 	ui.Reset()
-	ui.PutStr(fmt.Sprintf("Sites from config:"))
+	ui.AddLabel(0, 0, "Sites from config:")
 
 	var sitesList [][]string
 	sitesList = append(sitesList, []string{"Choice", "Name", "Path"})
 	for i, site := range sites {
 		sitesList = append(sitesList, []string{fmt.Sprintf("%d", i+1), site.Name, site.Path})
 	}
-	table := ui.AddTable(0, 2, sitesList)
-	ui.Draw(table)
-	ui.MoveCursor(0, 3+len(sitesList))
+	ui.AddTable(0, 2, sitesList)
 	prompt := "Please choose a site (default=1): "
-	ui.PutStr(prompt)
+	ui.AddLabel(0, 3+len(sitesList), prompt)
 	ui.MoveCursor(len(prompt), 3+len(sitesList))
+
+	ui.Draw()
 
 	siteSelect := getSelection(len(sitesList))
 
@@ -110,7 +110,8 @@ func startEditor(path string) {
 	editorCmd := exec.Command("vim", path)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
-	err := editorCmd.Run()
+	err := editorCmd.Start()
+	err = editorCmd.Wait()
 	check(err)
 }
 
@@ -127,16 +128,14 @@ func siteOverview(site hugo.Blog) {
 		postList = append(postList, []string{fmt.Sprintf("%d", i+1), post.Date, post.Title, draftStatus})
 	}
 
-	ui.PutStr("Posts from the blog:")
-	ui.MoveCursor(0, 1)
-	table := ui.AddTable(0, 1, postList)
-	ui.Draw(table)
+	ui.AddLabel(0, 0, "Posts from the blog:")
+	ui.AddTable(0, 1, postList)
 
-	ui.MoveCursor(0, 3+len(postList))
 	prompt := "Select a post to edit: "
-	ui.PutStr(prompt)
-	ui.MoveCursor(len(prompt), 3+len(postList))
+	ui.AddLabel(0, 3+len(postList), prompt)
+	ui.Draw()
 
+	ui.MoveCursor(len(prompt), 3+len(postList))
 	postNum := getSelection(len(postList))
 	startEditor(site.Posts[postNum].Path)
 }

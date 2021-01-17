@@ -26,6 +26,7 @@ type PneumaUI struct {
 	Style       tcell.Style
 	Mode        UIMode
 	InputBuffer string
+	Content     []Drawable
 }
 
 func check(e error) {
@@ -45,6 +46,7 @@ func Init() PneumaUI {
 		Cursor: Cursor{0, 0},
 		Exit:   false,
 		Mode:   Navigate,
+		Style:  tcell.StyleDefault,
 	}
 	return ui
 }
@@ -55,6 +57,7 @@ func (ui *PneumaUI) Reset() {
 	ui.Cursor = Cursor{0, 0}
 	ui.Mode = Navigate
 	ui.InputBuffer = ""
+	ui.Content = make([]Drawable, 0)
 }
 
 func (ui PneumaUI) Close() {
@@ -117,21 +120,14 @@ func (ui *PneumaUI) MoveCursor(x, y int) error {
 }
 
 func (ui PneumaUI) PutRune(r rune) {
-	ui.Screen.SetContent(ui.Cursor.X, ui.Cursor.Y, r, []rune{}, tcell.StyleDefault)
+	//ui.Screen.SetContent(ui.Cursor.X, ui.Cursor.Y, r, []rune{}, tcell.StyleDefault)
+	ui.Screen.SetContent(ui.Cursor.X, ui.Cursor.Y, r, []rune{}, ui.Style)
 }
 
 func (ui *PneumaUI) PutStr(str string) {
 	for _, c := range str {
 		ui.PutRune(rune(c))
 		ui.Cursor.X++
-	}
-}
-
-func (ui PneumaUI) PrintList(list []string) {
-	for num, item := range list {
-		outStr := fmt.Sprintf("%2d) %s", num+1, item)
-		ui.PutStr(outStr)
-		ui.Cursor.Y++
 	}
 }
 
@@ -177,12 +173,22 @@ func (ui *PneumaUI) VLine(startY, endY, x int) {
 }
 
 // Debug function to call specific
-func (ui *PneumaUI) Draw(drawable Drawable) {
-	drawable.Draw(ui)
+func (ui *PneumaUI) Draw() {
+	for _, drawable := range ui.Content {
+		drawable.Draw(ui)
+	}
+}
+
+func (ui *PneumaUI) AddLabel(x, y int, text string) *Label {
+	label := &Label{X: x, Y: y, Content: text}
+	ui.Content = append(ui.Content, label)
+	return label
 }
 
 func (ui *PneumaUI) AddTable(x, y int, content [][]string) *Table {
 	headings := content[0]
 	rows := content[0:]
-	return &Table{X: x, Y: y, Headings: headings, Content: rows}
+	table := &Table{X: x, Y: y, Headings: headings, Content: rows, Active: false}
+	ui.Content = append(ui.Content, table)
+	return table
 }

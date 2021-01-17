@@ -31,8 +31,10 @@ func (t *Table) AddRow(row []string) {
 }
 
 func (t Table) Draw(ui *PneumaUI) {
-
-	sep := "│"
+	if !t.Active {
+		ui.Style = ui.Style.Dim(true)
+	}
+	sep := ""
 	colWidths := make([]int, len(t.Headings))
 	for i, h := range t.Headings {
 		colWidths[i] = len(h) + 1
@@ -51,17 +53,26 @@ func (t Table) Draw(ui *PneumaUI) {
 	}
 
 	ui.MoveCursor(t.X, t.Y)
+	ui.Style = ui.Style.Bold(true)
+	ui.Style = ui.Style.Reverse(true)
 	ui.PutStr(sep)
 	for i, heading := range t.Headings {
 		ui.PutStr(fmt.Sprintf("%-*s%s", colWidths[i], heading, sep))
 	}
+
+	ui.Style = ui.Style.Bold(false)
+	ui.Style = ui.Style.Reverse(false)
+
 	ui.MoveCursor(t.X, t.Y+1)
 	for i, row := range t.Content {
 		ui.PutStr(sep)
 		for col, item := range row {
+
 			ui.PutStr(fmt.Sprintf("%-*s%s", colWidths[col], item, sep))
 		}
 		ui.MoveCursor(t.X, t.Y+1+i)
 	}
+
+	ui.Style = ui.Style.Normal()
 
 }
