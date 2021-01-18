@@ -172,6 +172,22 @@ func (ui *PneumaUI) VLine(startY, endY, x int) {
 	ui.Cursor = oldCursorPos
 }
 
+func (ui *PneumaUI) Box(x, y, w, h int) {
+	corners := []string{"╭", "╮", "╰", "╯"}
+	ui.HLine(x, x+w, y)
+	ui.HLine(x, x+w, y+h)
+	ui.VLine(y, y+h, x)
+	ui.VLine(y, y+h, x+w)
+	ui.MoveCursor(x, y)
+	ui.PutStr(corners[0])
+	ui.MoveCursor(x+w, y)
+	ui.PutStr(corners[1])
+	ui.MoveCursor(x, y+h)
+	ui.PutStr(corners[2])
+	ui.MoveCursor(x+w, y+h)
+	ui.PutStr(corners[3])
+}
+
 // Debug function to call specific
 func (ui *PneumaUI) Draw() {
 	for _, drawable := range ui.Content {
