@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"time"
 )
 
 type Site struct {
@@ -62,9 +63,8 @@ func siteSelect() hugo.Blog {
 	}
 	ui.AddTable(0, 2, sitesList)
 	prompt := "Please choose a site (default=1): "
-	ui.AddLabel(0, 3+len(sitesList), prompt)
+	ui.AddLabel(0, 4+len(sitesList), prompt)
 	ui.MoveCursor(len(prompt), 3+len(sitesList))
-
 	ui.Draw()
 
 	siteSelect := getSelection(len(sitesList))
@@ -125,7 +125,9 @@ func siteOverview(site hugo.Blog) {
 		if post.Draft {
 			draftStatus = "True"
 		}
-		postList = append(postList, []string{fmt.Sprintf("%d", i+1), post.Date, post.Title, draftStatus})
+		datetime, _ := time.Parse(time.RFC3339, post.Date)
+		date := datetime.Format("2006/01/02")
+		postList = append(postList, []string{fmt.Sprintf("%d", i+1), date, post.Title, draftStatus})
 	}
 
 	ui.AddLabel(0, 0, "Posts from the blog:")
