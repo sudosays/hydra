@@ -106,6 +106,14 @@ func (ui *PneumaUI) Tick() {
 				callback()
 				ui.Redraw()
 			}
+		} else if ui.Mode == Input {
+			if ev.Key() == tcell.KeyEnter || ev.Key() == tcell.KeyEscape {
+				ui.Mode = Navigate
+			} else if ev.Key() == tcell.KeyRune {
+				ui.InputBuffer += string(ev.Rune())
+				ui.PutRune(ev.Rune())
+				ui.Cursor.X++
+			}
 		}
 	}
 }
