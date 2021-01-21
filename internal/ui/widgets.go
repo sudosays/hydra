@@ -67,7 +67,6 @@ func (t Table) Draw(ui *PneumaUI) {
 	ui.MoveCursor(t.X+1, t.Y+2)
 	for i, row := range t.Content {
 		for col, item := range row {
-
 			ui.PutStr(fmt.Sprintf("%-*s", colWidths[col], item))
 		}
 		ui.MoveCursor(t.X+1, t.Y+2+i)

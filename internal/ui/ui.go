@@ -27,6 +27,7 @@ type PneumaUI struct {
 	Mode        UIMode
 	InputBuffer string
 	Content     []Drawable
+	Commands    map[CommandKey]func()
 }
 
 func check(e error) {
@@ -41,12 +42,14 @@ func Init() PneumaUI {
 	err = screen.Init()
 	check(err)
 	screen.Clear()
+	commands := make(map[CommandKey]func())
 	ui := PneumaUI{
-		Screen: screen,
-		Cursor: Cursor{0, 0},
-		Exit:   false,
-		Mode:   Navigate,
-		Style:  tcell.StyleDefault,
+		Screen:   screen,
+		Cursor:   Cursor{0, 0},
+		Exit:     false,
+		Mode:     Navigate,
+		Style:    tcell.StyleDefault,
+		Commands: commands,
 	}
 	return ui
 }
@@ -77,11 +80,28 @@ func (ui *PneumaUI) WaitForInput() string {
 	return ui.InputBuffer
 }
 
-func (ui *PneumaUI) WaitForCommand() string {
-	cmd := "nop"
-	return cmd
+func (ui *PneumaUI) SetCommands(commands map[CommandKey]func()) {
+	ui.Commands = commands
 }
 
+func (ui *PneumaUI) Tick() {
+	ui.drawFooter()
+	ui.Screen.Sync()
+	switch ev := ui.Screen.PollEvent().(type) {
+	case *tcell.EventResize:
+		ui.Screen.Sync()
+		ui.Draw()
+	case *tcell.EventKey:
+		if ui.Mode == Navigate {
+			cmd := CommandKey{Key: ev.Key(), Rune: ev.Rune(), Mod: ev.Modifiers()}
+			if callback, ok := ui.Commands[cmd]; ok {
+				callback()
+			}
+		}
+	}
+}
+
+/*
 func (ui *PneumaUI) Tick() {
 	ui.drawFooter()
 	ui.Screen.Sync()
@@ -92,8 +112,6 @@ func (ui *PneumaUI) Tick() {
 				switch ev.Rune() {
 				case 'q':
 					ui.Close()
-				case 'i':
-					ui.Mode = Input
 				}
 			}
 		} else {
@@ -107,6 +125,7 @@ func (ui *PneumaUI) Tick() {
 		}
 	}
 }
+*/
 
 func (ui *PneumaUI) MoveCursor(x, y int) error {
 	w, h := ui.Screen.Size()
@@ -201,10 +220,8 @@ func (ui *PneumaUI) AddLabel(x, y int, text string) *Label {
 	return label
 }
 
-func (ui *PneumaUI) AddTable(x, y int, content [][]string) *Table {
-	headings := content[0]
-	rows := content[0:]
-	table := &Table{X: x, Y: y, Headings: headings, Content: rows, Active: false}
+func (ui *PneumaUI) AddTable(x, y int, headings []string, content [][]string) *Table {
+	table := &Table{X: x, Y: y, Headings: headings, Content: content, Active: true, Index: 0}
 	ui.Content = append(ui.Content, table)
 	return table
 }
