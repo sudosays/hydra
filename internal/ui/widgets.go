@@ -51,7 +51,7 @@ func (t Table) Draw(ui *PneumaUI) {
 		maxWidth += width
 	}
 
-	ui.Box(t.X, t.Y, maxWidth+1, len(t.Content)+1)
+	ui.Box(t.X, t.Y, maxWidth+1, len(t.Content)+2)
 
 	ui.Style = ui.Style.Bold(true)
 	ui.Style = ui.Style.Underline(true)
@@ -69,7 +69,7 @@ func (t Table) Draw(ui *PneumaUI) {
 		for col, item := range row {
 			ui.PutStr(fmt.Sprintf("%-*s", colWidths[col], item))
 		}
-		ui.MoveCursor(t.X+1, t.Y+2+i)
+		ui.MoveCursor(t.X+1, t.Y+3+i)
 	}
 
 	ui.Style = ui.Style.Normal()

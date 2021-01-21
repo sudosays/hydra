@@ -7,6 +7,7 @@ import (
 	libui "github.com/sudosays/pneuma/internal/ui"
 	"github.com/sudosays/pneuma/pkg/data/hugo"
 	"io"
+	//"log"
 	"os"
 	"os/exec"
 	"path"
@@ -125,6 +126,7 @@ func siteOverview(site hugo.Blog) {
 	posts := site.Posts
 	headings := []string{"#", "Date", "Title", "Draft"}
 	var postList [][]string
+
 	for i, post := range posts {
 		draftStatus := "False"
 		if post.Draft {
@@ -139,7 +141,7 @@ func siteOverview(site hugo.Blog) {
 	ui.AddTable(0, 1, headings, postList)
 
 	prompt := "Select a post to edit: "
-	ui.AddLabel(0, 3+len(postList), prompt)
+	ui.AddLabel(0, 4+len(postList), prompt)
 	ui.Draw()
 
 	ui.MoveCursor(len(prompt), 3+len(postList))
