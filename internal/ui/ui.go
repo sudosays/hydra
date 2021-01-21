@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"os"
 	//"strings"
+	"log"
 )
 
 type UIMode int
@@ -54,6 +55,12 @@ func Init() PneumaUI {
 	return ui
 }
 
+func (ui *PneumaUI) Redraw() {
+	ui.Screen.Clear()
+	ui.Draw()
+	ui.Screen.Sync()
+}
+
 func (ui *PneumaUI) Reset() {
 	ui.Screen.Clear()
 	ui.Screen.Sync()
@@ -89,43 +96,19 @@ func (ui *PneumaUI) Tick() {
 	ui.Screen.Sync()
 	switch ev := ui.Screen.PollEvent().(type) {
 	case *tcell.EventResize:
-		ui.Screen.Sync()
-		ui.Draw()
+		ui.Redraw()
 	case *tcell.EventKey:
 		if ui.Mode == Navigate {
+			log.SetOutput(os.Stderr)
+			log.Printf("Rune of key is %v\n", ev.Rune())
 			cmd := CommandKey{Key: ev.Key(), Rune: ev.Rune(), Mod: ev.Modifiers()}
 			if callback, ok := ui.Commands[cmd]; ok {
 				callback()
+				ui.Redraw()
 			}
 		}
 	}
 }
-
-/*
-func (ui *PneumaUI) Tick() {
-	ui.drawFooter()
-	ui.Screen.Sync()
-	switch ev := ui.Screen.PollEvent().(type) {
-	case *tcell.EventKey:
-		if ui.Mode == Navigate {
-			if ev.Key() == tcell.KeyRune {
-				switch ev.Rune() {
-				case 'q':
-					ui.Close()
-				}
-			}
-		} else {
-			if ev.Key() == tcell.KeyEnter || ev.Key() == tcell.KeyEscape {
-				ui.Mode = Navigate
-			} else if ev.Key() == tcell.KeyRune {
-				ui.InputBuffer += string(ev.Rune())
-				ui.PutRune(ev.Rune())
-				ui.Cursor.X++
-			}
-		}
-	}
-}
-*/
 
 func (ui *PneumaUI) MoveCursor(x, y int) error {
 	w, h := ui.Screen.Size()
