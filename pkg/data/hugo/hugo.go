@@ -2,6 +2,7 @@ package hugo
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -9,8 +10,8 @@ import (
 )
 
 type Blog struct {
-	Title string
-	Posts []Post
+	Title, Path string
+	Posts       []Post
 }
 
 type Post struct {
@@ -36,7 +37,26 @@ func Config() string {
 
 func Load(path string) Blog {
 	os.Chdir(path)
-	return Blog{Title: "blog", Posts: loadPosts()}
+	return Blog{Title: "blog", Path: path, Posts: loadPosts()}
+}
+
+func (blog *Blog) NewPost(title string) string {
+	os.Chdir(blog.Path)
+
+	ext := ".md"
+	filename := strings.ToLower(title)
+	filename = strings.TrimSpace(filename)
+	filename = strings.ReplaceAll(filename, " ", "-")
+	filename = strings.ReplaceAll(filename, ":", "")
+	filePath := fmt.Sprintf("%s%s%s", blog.Path, filename, ext)
+
+	newPostCmd := exec.Command("hugo", "new", filePath)
+	_, err := newPostCmd.Output()
+	check(err)
+
+	blog.Posts = loadPosts()
+
+	return filePath
 }
 
 func loadPosts() []Post {
