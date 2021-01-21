@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gdamore/tcell/v2"
 	libui "github.com/sudosays/pneuma/internal/ui"
 	"github.com/sudosays/pneuma/pkg/data/hugo"
 	"io"
@@ -36,6 +37,10 @@ func init() {
 }
 
 func main() {
+	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
+	cmds := make(map[libui.CommandKey]func())
+	cmds[quitCmdEventKey] = Quit
+	ui.SetCommands(cmds)
 
 	var site hugo.Blog
 	if len(sites) > 1 {
@@ -45,7 +50,6 @@ func main() {
 	}
 
 	siteOverview(site)
-
 	for {
 		ui.Tick()
 	}
@@ -56,12 +60,13 @@ func siteSelect() hugo.Blog {
 	ui.Reset()
 	ui.AddLabel(0, 0, "Sites from config:")
 
+	headings := []string{"Choice", "Name", "Path"}
+
 	var sitesList [][]string
-	sitesList = append(sitesList, []string{"Choice", "Name", "Path"})
 	for i, site := range sites {
 		sitesList = append(sitesList, []string{fmt.Sprintf("%d", i+1), site.Name, site.Path})
 	}
-	ui.AddTable(0, 2, sitesList)
+	ui.AddTable(0, 2, headings, sitesList)
 	prompt := "Please choose a site (default=1): "
 	ui.AddLabel(0, 4+len(sitesList), prompt)
 	ui.MoveCursor(len(prompt), 3+len(sitesList))
@@ -118,8 +123,8 @@ func startEditor(path string) {
 func siteOverview(site hugo.Blog) {
 	ui.Reset()
 	posts := site.Posts
+	headings := []string{"#", "Date", "Title", "Draft"}
 	var postList [][]string
-	postList = append(postList, []string{"#", "Date", "Title", "Draft"})
 	for i, post := range posts {
 		draftStatus := "False"
 		if post.Draft {
@@ -131,13 +136,17 @@ func siteOverview(site hugo.Blog) {
 	}
 
 	ui.AddLabel(0, 0, "Posts from the blog:")
-	ui.AddTable(0, 1, postList)
+	ui.AddTable(0, 1, headings, postList)
 
 	prompt := "Select a post to edit: "
 	ui.AddLabel(0, 3+len(postList), prompt)
 	ui.Draw()
 
 	ui.MoveCursor(len(prompt), 3+len(postList))
-	postNum := getSelection(len(postList))
-	startEditor(site.Posts[postNum].Path)
+	//postNum := getSelection(len(postList))
+	//startEditor(site.Posts[postNum].Path)
+}
+
+func Quit() {
+	ui.Close()
 }
