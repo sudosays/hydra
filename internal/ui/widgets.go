@@ -31,8 +31,9 @@ func (t *Table) AddRow(row []string) {
 }
 
 func (t Table) Draw(ui *PneumaUI) {
-
-	sep := "│"
+	if !t.Active {
+		ui.Style = ui.Style.Dim(true)
+	}
 	colWidths := make([]int, len(t.Headings))
 	for i, h := range t.Headings {
 		colWidths[i] = len(h) + 1
@@ -50,18 +51,45 @@ func (t Table) Draw(ui *PneumaUI) {
 		maxWidth += width
 	}
 
-	ui.MoveCursor(t.X, t.Y)
-	ui.PutStr(sep)
+	ui.Box(t.X, t.Y, maxWidth+1, len(t.Content)+2)
+
+	ui.Style = ui.Style.Bold(true)
+	ui.Style = ui.Style.Underline(true)
+
+	ui.MoveCursor(t.X+1, t.Y+1)
 	for i, heading := range t.Headings {
-		ui.PutStr(fmt.Sprintf("%-*s%s", colWidths[i], heading, sep))
-	}
-	ui.MoveCursor(t.X, t.Y+1)
-	for i, row := range t.Content {
-		ui.PutStr(sep)
-		for col, item := range row {
-			ui.PutStr(fmt.Sprintf("%-*s%s", colWidths[col], item, sep))
-		}
-		ui.MoveCursor(t.X, t.Y+1+i)
+		ui.PutStr(fmt.Sprintf("%-*s", colWidths[i], heading))
 	}
 
+	ui.Style = ui.Style.Bold(false)
+	ui.Style = ui.Style.Underline(false)
+
+	ui.MoveCursor(t.X+1, t.Y+2)
+	for i, row := range t.Content {
+		for col, item := range row {
+			if i == t.Index {
+				ui.Style = ui.Style.Reverse(true)
+				ui.PutStr(fmt.Sprintf("%-*s", colWidths[col], item))
+				ui.Style = ui.Style.Reverse(false)
+			} else {
+				ui.PutStr(fmt.Sprintf("%-*s", colWidths[col], item))
+			}
+		}
+		ui.MoveCursor(t.X+1, t.Y+3+i)
+	}
+
+	ui.Style = ui.Style.Normal()
+
+}
+
+func (t *Table) NextItem() {
+	t.Index = (t.Index + 1) % len(t.Content)
+}
+
+func (t *Table) PreviousItem() {
+	if t.Index-1 < 0 {
+		t.Index = len(t.Content) - 1
+	} else {
+		t.Index--
+	}
 }

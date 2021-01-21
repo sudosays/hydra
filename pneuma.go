@@ -3,13 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gdamore/tcell/v2"
 	libui "github.com/sudosays/pneuma/internal/ui"
 	"github.com/sudosays/pneuma/pkg/data/hugo"
 	"io"
+	//"log"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
+	"time"
 )
 
 type Site struct {
@@ -35,6 +38,10 @@ func init() {
 }
 
 func main() {
+	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
+	cmds := make(map[libui.CommandKey]func())
+	cmds[quitCmdEventKey] = Quit
+	ui.SetCommands(cmds)
 
 	var site hugo.Blog
 	if len(sites) > 1 {
@@ -44,7 +51,6 @@ func main() {
 	}
 
 	siteOverview(site)
-
 	for {
 		ui.Tick()
 	}
@@ -53,19 +59,19 @@ func main() {
 
 func siteSelect() hugo.Blog {
 	ui.Reset()
-	ui.PutStr(fmt.Sprintf("Sites from config:"))
+	ui.AddLabel(0, 0, "Sites from config:")
+
+	headings := []string{"Choice", "Name", "Path"}
 
 	var sitesList [][]string
-	sitesList = append(sitesList, []string{"Choice", "Name", "Path"})
 	for i, site := range sites {
 		sitesList = append(sitesList, []string{fmt.Sprintf("%d", i+1), site.Name, site.Path})
 	}
-	table := ui.AddTable(0, 2, sitesList)
-	ui.Draw(table)
-	ui.MoveCursor(0, 3+len(sitesList))
+	ui.AddTable(0, 2, headings, sitesList)
 	prompt := "Please choose a site (default=1): "
-	ui.PutStr(prompt)
+	ui.AddLabel(0, 4+len(sitesList), prompt)
 	ui.MoveCursor(len(prompt), 3+len(sitesList))
+	ui.Draw()
 
 	siteSelect := getSelection(len(sitesList))
 
@@ -110,33 +116,57 @@ func startEditor(path string) {
 	editorCmd := exec.Command("vim", path)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
-	err := editorCmd.Run()
+	err := editorCmd.Start()
+	err = editorCmd.Wait()
 	check(err)
 }
 
 func siteOverview(site hugo.Blog) {
 	ui.Reset()
 	posts := site.Posts
+	headings := []string{"#", "Date", "Title", "Draft"}
 	var postList [][]string
-	postList = append(postList, []string{"#", "Date", "Title", "Draft"})
+
 	for i, post := range posts {
 		draftStatus := "False"
 		if post.Draft {
 			draftStatus = "True"
 		}
-		postList = append(postList, []string{fmt.Sprintf("%d", i+1), post.Date, post.Title, draftStatus})
+		datetime, _ := time.Parse(time.RFC3339, post.Date)
+		date := datetime.Format("2006/01/02")
+		postList = append(postList, []string{fmt.Sprintf("%d", i+1), date, post.Title, draftStatus})
 	}
 
-	ui.PutStr("Posts from the blog:")
-	ui.MoveCursor(0, 1)
-	table := ui.AddTable(0, 1, postList)
-	ui.Draw(table)
+	ui.AddLabel(0, 0, "Posts from the blog:")
+	table := ui.AddTable(0, 1, headings, postList)
 
-	ui.MoveCursor(0, 3+len(postList))
+	editPost := func() {
+		path := posts[table.Index].Path
+		startEditor(path)
+	}
+
+	nextCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'j', Mod: tcell.ModNone}
+	prevCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'k', Mod: tcell.ModNone}
+	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
+	enterCmdEventKey := libui.CommandKey{Key: tcell.KeyEnter, Rune: rune(13), Mod: tcell.ModNone}
+
+	cmds := make(map[libui.CommandKey]func())
+	cmds[quitCmdEventKey] = Quit
+	cmds[nextCmdEventKey] = table.NextItem
+	cmds[prevCmdEventKey] = table.PreviousItem
+	cmds[enterCmdEventKey] = editPost
+
+	ui.SetCommands(cmds)
+
 	prompt := "Select a post to edit: "
-	ui.PutStr(prompt)
-	ui.MoveCursor(len(prompt), 3+len(postList))
+	ui.AddLabel(0, 4+len(postList), prompt)
+	ui.Draw()
 
-	postNum := getSelection(len(postList))
-	startEditor(site.Posts[postNum].Path)
+	ui.MoveCursor(len(prompt), 3+len(postList))
+	//postNum := getSelection(len(postList))
+	//startEditor(site.Posts[postNum].Path)
+}
+
+func Quit() {
+	ui.Close()
 }
