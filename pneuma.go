@@ -138,7 +138,25 @@ func siteOverview(site hugo.Blog) {
 	}
 
 	ui.AddLabel(0, 0, "Posts from the blog:")
-	ui.AddTable(0, 1, headings, postList)
+	table := ui.AddTable(0, 1, headings, postList)
+
+	editPost := func() {
+		path := posts[table.Index].Path
+		startEditor(path)
+	}
+
+	nextCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'j', Mod: tcell.ModNone}
+	prevCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'k', Mod: tcell.ModNone}
+	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
+	enterCmdEventKey := libui.CommandKey{Key: tcell.KeyEnter, Rune: rune(13), Mod: tcell.ModNone}
+
+	cmds := make(map[libui.CommandKey]func())
+	cmds[quitCmdEventKey] = Quit
+	cmds[nextCmdEventKey] = table.NextItem
+	cmds[prevCmdEventKey] = table.PreviousItem
+	cmds[enterCmdEventKey] = editPost
+
+	ui.SetCommands(cmds)
 
 	prompt := "Select a post to edit: "
 	ui.AddLabel(0, 4+len(postList), prompt)

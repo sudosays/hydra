@@ -67,11 +67,29 @@ func (t Table) Draw(ui *PneumaUI) {
 	ui.MoveCursor(t.X+1, t.Y+2)
 	for i, row := range t.Content {
 		for col, item := range row {
-			ui.PutStr(fmt.Sprintf("%-*s", colWidths[col], item))
+			if i == t.Index {
+				ui.Style = ui.Style.Reverse(true)
+				ui.PutStr(fmt.Sprintf("%-*s", colWidths[col], item))
+				ui.Style = ui.Style.Reverse(false)
+			} else {
+				ui.PutStr(fmt.Sprintf("%-*s", colWidths[col], item))
+			}
 		}
 		ui.MoveCursor(t.X+1, t.Y+3+i)
 	}
 
 	ui.Style = ui.Style.Normal()
 
+}
+
+func (t *Table) NextItem() {
+	t.Index = (t.Index + 1) % len(t.Content)
+}
+
+func (t *Table) PreviousItem() {
+	if t.Index-1 < 0 {
+		t.Index = len(t.Content) - 1
+	} else {
+		t.Index--
+	}
 }
