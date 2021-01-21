@@ -48,7 +48,7 @@ func (blog *Blog) NewPost(title string) string {
 	filename = strings.TrimSpace(filename)
 	filename = strings.ReplaceAll(filename, " ", "-")
 	filename = strings.ReplaceAll(filename, ":", "")
-	filePath := fmt.Sprintf("%s%s%s", blog.Path, filename, ext)
+	filePath := fmt.Sprintf("%s/%s%s", "blog", filename, ext)
 
 	newPostCmd := exec.Command("hugo", "new", filePath)
 	_, err := newPostCmd.Output()
