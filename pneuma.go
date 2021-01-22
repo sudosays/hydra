@@ -15,7 +15,8 @@ import (
 	"time"
 )
 
-type Site struct {
+// hugoSite contains the information for a hugo site listed in the config
+type hugoSite struct {
 	Name, Path string
 }
 
@@ -25,7 +26,7 @@ func check(e error) {
 	}
 }
 
-var sites []Site
+var sites []hugoSite
 var ui libui.PneumaUI
 
 func init() {
@@ -40,7 +41,7 @@ func init() {
 func main() {
 	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
 	cmds := make(map[libui.CommandKey]func())
-	cmds[quitCmdEventKey] = Quit
+	cmds[quitCmdEventKey] = quit
 	ui.SetCommands(cmds)
 
 	var site hugo.Blog
@@ -94,13 +95,13 @@ func getSelection(max int) int {
 	return selection
 }
 
-func readConfig(path string) []Site {
-	var sites []Site
+func readConfig(path string) []hugoSite {
+	var sites []hugoSite
 	configFile, err := os.Open(path)
 	check(err)
 	decoder := json.NewDecoder(configFile)
 	for {
-		var site Site
+		var site hugoSite
 		if err := decoder.Decode(&site); err == io.EOF {
 			break
 		} else {
@@ -151,7 +152,7 @@ func siteOverview(site hugo.Blog) {
 	enterCmdEventKey := libui.CommandKey{Key: tcell.KeyEnter, Rune: rune(13), Mod: tcell.ModNone}
 
 	cmds := make(map[libui.CommandKey]func())
-	cmds[quitCmdEventKey] = Quit
+	cmds[quitCmdEventKey] = quit
 	cmds[nextCmdEventKey] = table.NextItem
 	cmds[prevCmdEventKey] = table.PreviousItem
 	cmds[enterCmdEventKey] = editPost
@@ -163,10 +164,8 @@ func siteOverview(site hugo.Blog) {
 	ui.Draw()
 
 	ui.MoveCursor(len(prompt), 3+len(postList))
-	//postNum := getSelection(len(postList))
-	//startEditor(site.Posts[postNum].Path)
 }
 
-func Quit() {
+func quit() {
 	ui.Close()
 }

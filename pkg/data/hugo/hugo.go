@@ -9,11 +9,15 @@ import (
 	"strings"
 )
 
+// A Blog contains all the data of a Hugo blog. The Path represents the
+// working directory for the site.
 type Blog struct {
 	Title, Path string
 	Posts       []Post
 }
 
+// A Post contains all the metadata related to a hugo post, but not the content
+// of the post itself
 type Post struct {
 	Title, Date, Path string
 	Draft             bool
@@ -25,7 +29,7 @@ func check(err error) {
 	}
 }
 
-func Config() string {
+func loadConfig() string {
 	s := ""
 	hugoConfigCmd := exec.Command("hugo", "config")
 	hugoConfig, err := hugoConfigCmd.Output()
@@ -35,11 +39,15 @@ func Config() string {
 	return s
 }
 
+// Load takes a path to a hugo site working directory and returns a Blog.
 func Load(path string) Blog {
 	os.Chdir(path)
 	return Blog{Title: "blog", Path: path, Posts: loadPosts()}
 }
 
+// NewPost takes a title string and creates a new blog post before returning
+// the path to the created file. Important: for now, the default is to make a
+// new blog post in `$SITE_PATH/content/blog`
 func (blog *Blog) NewPost(title string) string {
 	os.Chdir(blog.Path)
 
