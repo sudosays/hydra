@@ -33,13 +33,17 @@ func init() {
 	home, err := os.UserHomeDir()
 	configPath := path.Join(home, ".config", "pneuma.json")
 	check(err)
-	sites = readConfig(configPath)
+	sites, err = readConfig(configPath)
+    check(err)
 	ui = libui.Init()
-
 }
 
 func main() {
-	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
+	quitCmdEventKey := libui.CommandKey{
+        Key: tcell.KeyRune,
+        Rune: 'q',
+        Mod: tcell.ModNone,
+    }
 	cmds := make(map[libui.CommandKey]func())
 	cmds[quitCmdEventKey] = quit
 	ui.SetCommands(cmds)
@@ -95,10 +99,11 @@ func getSelection(max int) int {
 	return selection
 }
 
-func readConfig(path string) []hugoSite {
+func readConfig(path string) ([]hugoSite, error) {
 	var sites []hugoSite
 	configFile, err := os.Open(path)
-	check(err)
+    check(err)
+
 	decoder := json.NewDecoder(configFile)
 	for {
 		var site hugoSite
@@ -110,7 +115,7 @@ func readConfig(path string) []hugoSite {
 		}
 	}
 	configFile.Close()
-	return sites
+	return sites, nil
 }
 
 func startEditor(path string) {
