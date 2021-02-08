@@ -93,6 +93,8 @@ func (ui *PneumaUI) Reset() {
 
 // Close finalises the tcell.Screen and exits the program with status code 0.
 func (ui PneumaUI) Close() {
+    ui.Screen.Clear()
+    ui.Screen.Sync()
 	ui.Screen.Fini()
 	os.Exit(0)
 	ui.Exit = true
