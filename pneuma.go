@@ -44,8 +44,8 @@ func main() {
         Rune: 'q',
         Mod: tcell.ModNone,
     }
-	cmds := make(map[libui.CommandKey]func())
-	cmds[quitCmdEventKey] = quit
+	cmds := make(map[libui.CommandKey]libui.Command)
+    cmds[quitCmdEventKey] = libui.Command{Callback: quit, Description: "Quit"}
 	ui.SetCommands(cmds)
 
 	var site hugo.Blog
@@ -122,8 +122,7 @@ func startEditor(path string) {
 	editorCmd := exec.Command("vim", path)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
-	err := editorCmd.Start()
-	err = editorCmd.Wait()
+	err := editorCmd.Run()
 	check(err)
 }
 
@@ -156,11 +155,11 @@ func siteOverview(site hugo.Blog) {
 	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
 	enterCmdEventKey := libui.CommandKey{Key: tcell.KeyEnter, Rune: rune(13), Mod: tcell.ModNone}
 
-	cmds := make(map[libui.CommandKey]func())
-	cmds[quitCmdEventKey] = quit
-	cmds[nextCmdEventKey] = table.NextItem
-	cmds[prevCmdEventKey] = table.PreviousItem
-	cmds[enterCmdEventKey] = editPost
+	cmds := make(map[libui.CommandKey]libui.Command)
+    cmds[quitCmdEventKey] = libui.Command{Callback: quit, Description: "Quit"}
+    cmds[nextCmdEventKey] = libui.Command{Callback: table.NextItem, Description: "Next item"}
+    cmds[prevCmdEventKey] = libui.Command{Callback: table.PreviousItem, Description: "Prev item"}
+    cmds[enterCmdEventKey] = libui.Command{Callback: editPost, Description: "Edit post"}
 
 	ui.SetCommands(cmds)
 
