@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"os"
-	//"strings"
-	"log"
 )
 
 // Mode defines the behaviour of the UI: Navigate or Input. It controls how
@@ -28,6 +26,13 @@ type CommandKey struct {
 	Mod  tcell.ModMask
 }
 
+// Command stores a callback function and a description of the command for the
+// footer.
+type Command struct {
+    Callback func()
+    Description string
+}
+
 type cursor struct {
 	X, Y int
 }
@@ -42,7 +47,7 @@ type PneumaUI struct {
 	Mode        Mode
 	InputBuffer string
 	Content     []Drawable
-	Commands    map[CommandKey]func()
+	Commands    map[CommandKey]Command
 }
 
 func check(e error) {
@@ -60,7 +65,7 @@ func Init() PneumaUI {
 	err = screen.Init()
 	check(err)
 	screen.Clear()
-	commands := make(map[CommandKey]func())
+	commands := make(map[CommandKey]Command)
 	ui := PneumaUI{
 		Screen:   screen,
 		Cursor:   cursor{0, 0},
@@ -93,6 +98,8 @@ func (ui *PneumaUI) Reset() {
 
 // Close finalises the tcell.Screen and exits the program with status code 0.
 func (ui PneumaUI) Close() {
+    ui.Screen.Clear()
+    ui.Screen.Sync()
 	ui.Screen.Fini()
 	os.Exit(0)
 	ui.Exit = true
@@ -113,7 +120,7 @@ func (ui *PneumaUI) WaitForInput() string {
 
 // SetCommands takes a map of CommandKeys and callback functions that will be
 // checked against EventKeys in Tick().
-func (ui *PneumaUI) SetCommands(commands map[CommandKey]func()) {
+func (ui *PneumaUI) SetCommands(commands map[CommandKey]Command) {
 	ui.Commands = commands
 }
 
@@ -130,11 +137,9 @@ func (ui *PneumaUI) Tick() {
 		ui.Redraw()
 	case *tcell.EventKey:
 		if ui.Mode == Navigate {
-			log.SetOutput(os.Stderr)
-			log.Printf("Rune of key is %v\n", ev.Rune())
-			cmd := CommandKey{Key: ev.Key(), Rune: ev.Rune(), Mod: ev.Modifiers()}
-			if callback, ok := ui.Commands[cmd]; ok {
-				callback()
+			key := CommandKey{Key: ev.Key(), Rune: ev.Rune(), Mod: ev.Modifiers()}
+			if cmd, ok := ui.Commands[key]; ok {
+				cmd.Callback()
 				ui.Redraw()
 			}
 		} else if ui.Mode == Input {
@@ -178,7 +183,9 @@ func (ui PneumaUI) drawFooter() {
 	var footerContent string
 	switch ui.Mode {
 	case Navigate:
-		footerContent = "Q: quit, I: insert"
+        for key, cmd := range ui.Commands {
+            footerContent += fmt.Sprintf("[%s]: %s ", string(key.Rune), cmd.Description)
+        }
 	case Input:
 		footerContent = "INPUT"
 	}

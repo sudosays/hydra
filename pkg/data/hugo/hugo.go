@@ -59,12 +59,14 @@ func (blog *Blog) NewPost(title string) string {
 	filePath := fmt.Sprintf("%s/%s%s", "blog", filename, ext)
 
 	newPostCmd := exec.Command("hugo", "new", filePath)
-	_, err := newPostCmd.Output()
+	postPathRaw, err := newPostCmd.Output()
+    postPath := string(postPathRaw)
+    postPath = strings.Split(postPath, " ")[0]
 	check(err)
 
 	blog.Posts = loadPosts()
 
-	return filePath
+	return postPath
 }
 
 func loadPosts() []Post {
@@ -93,4 +95,15 @@ func loadPosts() []Post {
 	}
 	check(err)
 	return posts
+}
+
+// Synchronise removes all the files in a blog's public directory and then
+// builds the site with Hugo.
+func (blog Blog) Synchronise() {
+    os.Chdir(blog.Path)
+
+    buildCmd := exec.Command("hugo")
+
+    err := buildCmd.Run()
+    check(err)
 }

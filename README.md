@@ -7,7 +7,7 @@ blogging experience.
 * [X] Load and display posts
 * [X] Edit posts from list
 * [X] Manage multiple sites specified in config file
-* [ ] Create new posts
+* [X] Create new posts
 * [ ] Publish drafts from post list
 * [ ] Github pages deploy
 * [ ] Browse/sort by date, draft status

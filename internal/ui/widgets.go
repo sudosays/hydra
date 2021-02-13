@@ -41,6 +41,11 @@ func (t *Table) AddRow(row []string) {
 	t.Content = append(t.Content, row)
 }
 
+func (t *Table) SetContent(headings []string, content [][]string) {
+    t.Headings = headings
+    t.Content = content
+}
+
 // Draw renders a table to the given PneumaUI. It makes sure to size the
 // columns to the max width of the widest item and does not truncate the
 // contents.  Furthermore, the selected item is higlighted with
