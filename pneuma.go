@@ -128,9 +128,62 @@ func startEditor(path string) {
 
 func siteOverview(site hugo.Blog) {
 	ui.Reset()
-	posts := site.Posts
-	headings := []string{"#", "Date", "Title", "Draft"}
-	var postList [][]string
+    posts := site.Posts
+    headings, postList := genPostList(site)
+
+	ui.AddLabel(0, 0, "Posts from the blog:")
+	table := ui.AddTable(0, 1, headings, postList)
+	prompt := "Select a post to edit: "
+	ui.AddLabel(0, 4+len(postList), prompt)
+	ui.Draw()
+
+	ui.MoveCursor(len(prompt), 3+len(postList))
+
+	editPost := func() {
+		path := posts[table.Index].Path
+		startEditor(path)
+	}
+
+    newPost := func() {
+        prompt := "Enter a title for the new post:"
+        ui.AddLabel(0, 4+len(postList), prompt)
+        ui.MoveCursor(len(prompt), 4+len(postList))
+        ui.Draw()
+        title := ui.WaitForInput()
+        filePath := site.NewPost(title)
+        startEditor(filePath)
+        posts = site.Posts
+        headings, postList := genPostList(site)
+        table.SetContent(headings, postList)
+    }
+
+	nextCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'j', Mod: tcell.ModNone}
+	prevCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'k', Mod: tcell.ModNone}
+	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
+	enterCmdEventKey := libui.CommandKey{Key: tcell.KeyEnter, Rune: rune(13), Mod: tcell.ModNone}
+    syncCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 's', Mod: tcell.ModNone}
+    newCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'n', Mod: tcell.ModNone}
+
+	cmds := make(map[libui.CommandKey]libui.Command)
+    cmds[quitCmdEventKey] = libui.Command{Callback: quit, Description: "Quit"}
+    cmds[nextCmdEventKey] = libui.Command{Callback: table.NextItem, Description: "Next item"}
+    cmds[prevCmdEventKey] = libui.Command{Callback: table.PreviousItem, Description: "Prev item"}
+    cmds[enterCmdEventKey] = libui.Command{Callback: editPost, Description: "Edit post"}
+    cmds[syncCmdEventKey] = libui.Command{Callback: site.Synchronise, Description: "Sync"}
+    cmds[newCmdEventKey] = libui.Command{Callback: newPost, Description: "Create a new post"}
+
+	ui.SetCommands(cmds)
+}
+
+func quit() {
+	ui.Close()
+}
+
+func genPostList(blog hugo.Blog) ([]string, [][]string) {
+
+    posts := blog.Posts
+    headings := []string{"#", "Date", "Title", "Draft"}
+    var postList [][]string
 
 	for i, post := range posts {
 		draftStatus := "False"
@@ -142,34 +195,5 @@ func siteOverview(site hugo.Blog) {
 		postList = append(postList, []string{fmt.Sprintf("%d", i+1), date, post.Title, draftStatus})
 	}
 
-	ui.AddLabel(0, 0, "Posts from the blog:")
-	table := ui.AddTable(0, 1, headings, postList)
-
-	editPost := func() {
-		path := posts[table.Index].Path
-		startEditor(path)
-	}
-
-	nextCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'j', Mod: tcell.ModNone}
-	prevCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'k', Mod: tcell.ModNone}
-	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
-	enterCmdEventKey := libui.CommandKey{Key: tcell.KeyEnter, Rune: rune(13), Mod: tcell.ModNone}
-
-	cmds := make(map[libui.CommandKey]libui.Command)
-    cmds[quitCmdEventKey] = libui.Command{Callback: quit, Description: "Quit"}
-    cmds[nextCmdEventKey] = libui.Command{Callback: table.NextItem, Description: "Next item"}
-    cmds[prevCmdEventKey] = libui.Command{Callback: table.PreviousItem, Description: "Prev item"}
-    cmds[enterCmdEventKey] = libui.Command{Callback: editPost, Description: "Edit post"}
-
-	ui.SetCommands(cmds)
-
-	prompt := "Select a post to edit: "
-	ui.AddLabel(0, 4+len(postList), prompt)
-	ui.Draw()
-
-	ui.MoveCursor(len(prompt), 3+len(postList))
-}
-
-func quit() {
-	ui.Close()
+    return headings, postList
 }
