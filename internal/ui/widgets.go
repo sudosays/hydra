@@ -41,6 +41,9 @@ func (t *Table) AddRow(row []string) {
 	t.Content = append(t.Content, row)
 }
 
+// SetContent allows the table headings and rows to be changed dynamically.
+// This does not trigger a redraw, but the changes will be seen upon the Draw()
+// function being called.
 func (t *Table) SetContent(headings []string, content [][]string) {
     t.Headings = headings
     t.Content = content
