@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
@@ -60,8 +61,8 @@ func (blog *Blog) NewPost(title string) string {
 
 	newPostCmd := exec.Command("hugo", "new", filePath)
 	postPathRaw, err := newPostCmd.Output()
-    postPath := string(postPathRaw)
-    postPath = strings.Split(postPath, " ")[0]
+	postPath := string(postPathRaw)
+	postPath = strings.Split(postPath, " ")[0]
 	check(err)
 
 	blog.Posts = loadPosts()
@@ -100,10 +101,21 @@ func loadPosts() []Post {
 // Synchronise removes all the files in a blog's public directory and then
 // builds the site with Hugo.
 func (blog Blog) Synchronise() {
-    os.Chdir(blog.Path)
+	os.Chdir(blog.Path)
 
-    buildCmd := exec.Command("hugo")
+	buildCmd := exec.Command("hugo")
 
-    err := buildCmd.Run()
-    check(err)
+	err := buildCmd.Run()
+	check(err)
+}
+
+// DeletePost removes the post file from the site's content/section directory.
+// Warning: this method is destructive and should use user confirmation.
+func (blog *Blog) DeletePost(deletePath string) error {
+
+	os.Chdir(blog.Path)
+	postPath := path.Join(blog.Path, deletePath)
+	err := os.Remove(postPath)
+	blog.Posts = loadPosts()
+	return err
 }

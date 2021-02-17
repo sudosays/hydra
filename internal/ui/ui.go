@@ -29,8 +29,8 @@ type CommandKey struct {
 // Command stores a callback function and a description of the command for the
 // footer.
 type Command struct {
-    Callback func()
-    Description string
+	Callback    func()
+	Description string
 }
 
 type cursor struct {
@@ -98,8 +98,8 @@ func (ui *PneumaUI) Reset() {
 
 // Close finalises the tcell.Screen and exits the program with status code 0.
 func (ui PneumaUI) Close() {
-    ui.Screen.Clear()
-    ui.Screen.Sync()
+	ui.Screen.Clear()
+	ui.Screen.Sync()
 	ui.Screen.Fini()
 	os.Exit(0)
 	ui.Exit = true
@@ -116,6 +116,42 @@ func (ui *PneumaUI) WaitForInput() string {
 		}
 	}
 	return ui.InputBuffer
+}
+
+// Confirm stalls user interaction with a prompt and waits for the user to
+// either accept or reject the prompt (default: reject). This then returns the
+// choice as a boolean.
+func (ui *PneumaUI) Confirm(prompt string) bool {
+	confirmed := false
+
+	ui.Style = ui.Style.Reverse(true)
+	ui.putString(prompt)
+	ui.Style = ui.Style.Reverse(false)
+
+	ui.Style = ui.Style.Dim(true)
+	ui.Draw()
+
+	ui.Mode = Input
+	for {
+		ui.Tick()
+		if len(ui.InputBuffer) > 0 {
+			if ui.InputBuffer[0] == 'y' || ui.InputBuffer[0] == 'Y' {
+				confirmed = true
+				break
+			} else if ui.InputBuffer[0] == 'n' || ui.InputBuffer[0] == 'N' {
+				break
+			} else if ui.Mode == Navigate {
+				break
+			} else {
+				ui.InputBuffer = ""
+			}
+		}
+	}
+
+	ui.Style = ui.Style.Dim(false)
+	ui.InputBuffer = ""
+	ui.Mode = Navigate
+	return confirmed
 }
 
 // SetCommands takes a map of CommandKeys and callback functions that will be
@@ -143,23 +179,25 @@ func (ui *PneumaUI) Tick() {
 				ui.Redraw()
 			}
 		} else if ui.Mode == Input {
-            switch ev.Key() {
-            case tcell.KeyEnter :
-                ui.Mode = Navigate
-            case tcell.KeyEscape:
-                ui.Mode = Navigate
-                ui.InputBuffer = ""
-            case tcell.KeyBackspace, tcell.KeyBackspace2:
-                ui.InputBuffer = ui.InputBuffer[:len(ui.InputBuffer) -1]
-                ui.Cursor.X--
-                ui.putRune(' ')
-            case tcell.KeyRune:
-                ui.InputBuffer += string(ev.Rune())
+			switch ev.Key() {
+			case tcell.KeyEnter:
+				ui.Mode = Navigate
+			case tcell.KeyEscape:
+				ui.Mode = Navigate
+				ui.InputBuffer = ""
+			case tcell.KeyBackspace, tcell.KeyBackspace2:
+				if len(ui.InputBuffer) > 0 {
+					ui.InputBuffer = ui.InputBuffer[:len(ui.InputBuffer)-1]
+					ui.Cursor.X--
+					ui.putRune(' ')
+				}
+			case tcell.KeyRune:
+				ui.InputBuffer += string(ev.Rune())
 				ui.putRune(ev.Rune())
 				ui.Cursor.X++
-            }
+			}
 
-        }
+		}
 	}
 }
 
@@ -192,9 +230,9 @@ func (ui PneumaUI) drawFooter() {
 	var footerContent string
 	switch ui.Mode {
 	case Navigate:
-        for key, cmd := range ui.Commands {
-            footerContent += fmt.Sprintf("[%s]: %s ", string(key.Rune), cmd.Description)
-        }
+		for key, cmd := range ui.Commands {
+			footerContent += fmt.Sprintf("[%s]: %s ", string(key.Rune), cmd.Description)
+		}
 	case Input:
 		footerContent = "INPUT"
 	}
