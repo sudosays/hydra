@@ -16,4 +16,8 @@ test:
 verify:
 	golint ./...
 
+prep: test verify
+	go mod tidy
+	
+	
 
