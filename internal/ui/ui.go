@@ -143,14 +143,23 @@ func (ui *PneumaUI) Tick() {
 				ui.Redraw()
 			}
 		} else if ui.Mode == Input {
-			if ev.Key() == tcell.KeyEnter || ev.Key() == tcell.KeyEscape {
-				ui.Mode = Navigate
-			} else if ev.Key() == tcell.KeyRune {
-				ui.InputBuffer += string(ev.Rune())
+            switch ev.Key() {
+            case tcell.KeyEnter :
+                ui.Mode = Navigate
+            case tcell.KeyEscape:
+                ui.Mode = Navigate
+                ui.InputBuffer = ""
+            case tcell.KeyBackspace, tcell.KeyBackspace2:
+                ui.InputBuffer = ui.InputBuffer[:len(ui.InputBuffer) -1]
+                ui.Cursor.X--
+                ui.putRune(' ')
+            case tcell.KeyRune:
+                ui.InputBuffer += string(ev.Rune())
 				ui.putRune(ev.Rune())
 				ui.Cursor.X++
-			}
-		}
+            }
+
+        }
 	}
 }
 
