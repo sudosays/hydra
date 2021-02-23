@@ -150,11 +150,13 @@ func siteOverview(site hugo.Blog) {
 		ui.MoveCursor(len(prompt), 4+len(postList))
 		ui.Draw()
 		title := ui.WaitForInput()
-		filePath := site.NewPost(title)
-		startEditor(filePath)
-		posts = site.Posts
-		headings, postList := genPostList(site)
-		table.SetContent(headings, postList)
+		if title != "" {
+			filePath := site.NewPost(title)
+			startEditor(filePath)
+			posts = site.Posts
+			headings, postList := genPostList(site)
+			table.SetContent(headings, postList)
+		}
 	}
 
 	deletePost := func() {
