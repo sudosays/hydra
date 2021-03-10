@@ -48,6 +48,7 @@ type PneumaUI struct {
 	InputBuffer string
 	Content     []Drawable
 	Commands    map[CommandKey]Command
+	suspended 	bool
 }
 
 func check(e error) {
@@ -73,6 +74,7 @@ func Init() PneumaUI {
 		Mode:     Navigate,
 		Style:    tcell.StyleDefault,
 		Commands: commands,
+		suspended: false,
 	}
 	return ui
 }
@@ -166,6 +168,10 @@ func (ui *PneumaUI) SetCommands(commands map[CommandKey]Command) {
 // alphanumerical letters to the input buffer (terminating on escape or enter)
 // and rendering the character to screen at the cursor.
 func (ui *PneumaUI) Tick() {
+	if ui.Mode == Paused {
+		return
+	}
+
 	ui.drawFooter()
 	ui.Screen.Sync()
 	switch ev := ui.Screen.PollEvent().(type) {
@@ -307,4 +313,24 @@ func (ui *PneumaUI) AddTable(x, y int, headings []string, content [][]string) *T
 	table := &Table{X: x, Y: y, Headings: headings, Content: content, Active: true, Index: 0}
 	ui.Content = append(ui.Content, table)
 	return table
+}
+
+// Suspend stops and destroys the screen and allows another program to run
+func (ui *PneumaUI) Suspend() {
+	ui.Screen.Fini()
+	ui.suspended = true
+}
+
+// Resume creates a new screen after the previous one was destroyed with Suspend
+func (ui *PneumaUI) Resume() {
+	if ui.suspended {
+		screen, err := tcell.NewScreen()
+		check(err)
+		err = screen.Init()
+		check(err)
+		screen.Clear()
+		ui.Screen = screen
+		ui.suspended = false
+		ui.Redraw()
+	}
 }

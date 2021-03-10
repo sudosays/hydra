@@ -122,7 +122,9 @@ func startEditor(path string) {
 	editorCmd := exec.Command("vim", path)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
+	ui.Suspend()
 	err := editorCmd.Run()
+	ui.Resume()
 	check(err)
 }
 
