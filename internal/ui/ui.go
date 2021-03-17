@@ -48,7 +48,7 @@ type PneumaUI struct {
 	InputBuffer string
 	Content     []Drawable
 	Commands    map[CommandKey]Command
-	suspended 	bool
+	suspended   bool
 }
 
 func check(e error) {
@@ -68,12 +68,12 @@ func Init() PneumaUI {
 	screen.Clear()
 	commands := make(map[CommandKey]Command)
 	ui := PneumaUI{
-		Screen:   screen,
-		Cursor:   cursor{0, 0},
-		Exit:     false,
-		Mode:     Navigate,
-		Style:    tcell.StyleDefault,
-		Commands: commands,
+		Screen:    screen,
+		Cursor:    cursor{0, 0},
+		Exit:      false,
+		Mode:      Navigate,
+		Style:     tcell.StyleDefault,
+		Commands:  commands,
 		suspended: false,
 	}
 	return ui
@@ -168,7 +168,7 @@ func (ui *PneumaUI) SetCommands(commands map[CommandKey]Command) {
 // alphanumerical letters to the input buffer (terminating on escape or enter)
 // and rendering the character to screen at the cursor.
 func (ui *PneumaUI) Tick() {
-	if ui.Mode == Paused {
+	if ui.suspended {
 		return
 	}
 
