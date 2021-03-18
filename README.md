@@ -29,10 +29,16 @@ _TBC_
 ### Configuration
 
 Currently, pneuma does not have a configuration wizard, but it automatically loads the configuration file at `~/.config/pneuma.json`. The config file itself is very straighforward:
-```json
-{"Name": "name of site", "Path":"/path/to/site/"}
-{"Name": "name of other site", "Path":"/path/to/site2/"}
+``` json
+{   "extension": "org",
+    "editor":"/path/to/editor",
+    "sites": [
+        {"name":"Site one", "path":"/path/to/site/"},
+        {"name":"Site two", "path":"/path/to/site2/"}
+    ]
+}
 ```
+
 Note: the name of the site in the config file can be any name that you choose. It is there to help you distinguish between different sites.
 
 ## Usage

@@ -20,20 +20,26 @@ type hugoSite struct {
 	Name, Path string
 }
 
+type pneumaConfig struct {
+	extension string
+	editor string
+	sites []hugoSite
+}
+
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
-var sites []hugoSite
+var config pneumaConfig
 var ui libui.PneumaUI
 
 func init() {
 	home, err := os.UserHomeDir()
 	configPath := path.Join(home, ".config", "pneuma.json")
 	check(err)
-	sites, err = readConfig(configPath)
+	config, err = readConfig(configPath)
 	check(err)
 	ui = libui.Init()
 }
@@ -49,10 +55,10 @@ func main() {
 	ui.SetCommands(cmds)
 
 	var site hugo.Blog
-	if len(sites) > 1 {
+	if len(config.sites) > 1 {
 		site = siteSelect()
 	} else {
-		site = hugo.Load(sites[0].Path)
+		site = hugo.Load(config.sites[0].Path)
 	}
 
 	siteOverview(site)
@@ -69,7 +75,7 @@ func siteSelect() hugo.Blog {
 	headings := []string{"Choice", "Name", "Path"}
 
 	var sitesList [][]string
-	for i, site := range sites {
+	for i, site := range config.sites {
 		sitesList = append(sitesList, []string{fmt.Sprintf("%d", i+1), site.Name, site.Path})
 	}
 	ui.AddTable(0, 2, headings, sitesList)
@@ -80,7 +86,7 @@ func siteSelect() hugo.Blog {
 
 	siteSelect := getSelection(len(sitesList))
 
-	site := hugo.Load(sites[siteSelect].Path)
+	site := hugo.Load(config.sites[siteSelect].Path)
 	return site
 }
 
@@ -99,27 +105,25 @@ func getSelection(max int) int {
 	return selection
 }
 
-func readConfig(path string) ([]hugoSite, error) {
-	var sites []hugoSite
+func readConfig(path string) (pneumaConfig, error) {
+	var conf pneumaConfig
 	configFile, err := os.Open(path)
 	check(err)
 
 	decoder := json.NewDecoder(configFile)
 	for {
-		var site hugoSite
-		if err := decoder.Decode(&site); err == io.EOF {
+		if err := decoder.Decode(&conf); err == io.EOF {
 			break
 		} else {
 			check(err)
-			sites = append(sites, site)
 		}
 	}
 	configFile.Close()
-	return sites, nil
+	return conf, nil
 }
 
 func startEditor(path string) {
-	editorCmd := exec.Command("vim", path)
+	editorCmd := exec.Command(config.editor, path)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
 	ui.Suspend()
