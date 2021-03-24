@@ -6,7 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	libui "github.com/sudosays/pneuma/internal/ui"
 	"github.com/sudosays/pneuma/pkg/data/hugo"
-	"io"
+	"io/ioutil"
 	//"log"
 	"os"
 	"os/exec"
@@ -15,15 +15,16 @@ import (
 	"time"
 )
 
-// hugoSite contains the information for a hugo site listed in the config
-type hugoSite struct {
-	Name, Path string
+type PneumaConfig struct {
+	Extension string     `json:"extension"`
+	Editor    string     `json:"editor"`
+	Sites     []HugoSite `json:"sites"`
 }
 
-type pneumaConfig struct {
-	extension string
-	editor string
-	sites []hugoSite
+// HugoSite contains the information for a hugo site listed in the config
+type HugoSite struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 func check(e error) {
@@ -32,7 +33,7 @@ func check(e error) {
 	}
 }
 
-var config pneumaConfig
+var config PneumaConfig
 var ui libui.PneumaUI
 
 func init() {
@@ -55,10 +56,10 @@ func main() {
 	ui.SetCommands(cmds)
 
 	var site hugo.Blog
-	if len(config.sites) > 1 {
+	if len(config.Sites) > 1 {
 		site = siteSelect()
 	} else {
-		site = hugo.Load(config.sites[0].Path)
+		site = hugo.Load(config.Sites[0].Path)
 	}
 
 	siteOverview(site)
@@ -75,7 +76,7 @@ func siteSelect() hugo.Blog {
 	headings := []string{"Choice", "Name", "Path"}
 
 	var sitesList [][]string
-	for i, site := range config.sites {
+	for i, site := range config.Sites {
 		sitesList = append(sitesList, []string{fmt.Sprintf("%d", i+1), site.Name, site.Path})
 	}
 	ui.AddTable(0, 2, headings, sitesList)
@@ -86,7 +87,7 @@ func siteSelect() hugo.Blog {
 
 	siteSelect := getSelection(len(sitesList))
 
-	site := hugo.Load(config.sites[siteSelect].Path)
+	site := hugo.Load(config.Sites[siteSelect].Path)
 	return site
 }
 
@@ -105,25 +106,21 @@ func getSelection(max int) int {
 	return selection
 }
 
-func readConfig(path string) (pneumaConfig, error) {
-	var conf pneumaConfig
+func readConfig(path string) (PneumaConfig, error) {
+	conf := PneumaConfig{}
 	configFile, err := os.Open(path)
 	check(err)
-
-	decoder := json.NewDecoder(configFile)
-	for {
-		if err := decoder.Decode(&conf); err == io.EOF {
-			break
-		} else {
-			check(err)
-		}
-	}
+	byteValue, err := ioutil.ReadAll(configFile)
+	check(err)
+	fmt.Printf("%s", byteValue)
+	json.Unmarshal(byteValue, &conf)
+	fmt.Printf("Config is: %+v", conf)
 	configFile.Close()
 	return conf, nil
 }
 
 func startEditor(path string) {
-	editorCmd := exec.Command(config.editor, path)
+	editorCmd := exec.Command(config.Editor, path)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
 	ui.Suspend()
