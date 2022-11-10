@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gdamore/tcell/v2"
-	libui "github.com/sudosays/pneuma/internal/ui"
-	"github.com/sudosays/pneuma/pkg/data/hugo"
+	libui "github.com/sudosays/hydra/internal/ui"
+	"github.com/sudosays/hydra/pkg/data/hugo"
 	"io/ioutil"
 	//"log"
 	"os"
@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-type PneumaConfig struct {
+type HydraConfig struct {
 	Extension string     `json:"extension"`
 	Editor    string     `json:"editor"`
 	Sites     []HugoSite `json:"sites"`
@@ -33,12 +33,12 @@ func check(e error) {
 	}
 }
 
-var config PneumaConfig
-var ui libui.PneumaUI
+var config HydraConfig
+var ui libui.HydraUI
 
 func init() {
 	home, err := os.UserHomeDir()
-	configPath := path.Join(home, ".config", "pneuma.json")
+	configPath := path.Join(home, ".config", "hydra.json")
 	check(err)
 	config, err = readConfig(configPath)
 	check(err)
@@ -106,8 +106,8 @@ func getSelection(max int) int {
 	return selection
 }
 
-func readConfig(path string) (PneumaConfig, error) {
-	conf := PneumaConfig{}
+func readConfig(path string) (HydraConfig, error) {
+	conf := HydraConfig{}
 	configFile, err := os.Open(path)
 	check(err)
 	byteValue, err := ioutil.ReadAll(configFile)

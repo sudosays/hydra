@@ -1,6 +1,6 @@
-# Pneuma: A blogging frontend for Hugo
+# Hydra: A command-line manager for Hugo
 
-The aim of pneuma is to keep it simple and clean, but still provide a slick
+The aim of hydra is to keep it simple and clean, but still provide a slick
 blogging experience.
 
 ## Roadmap
@@ -20,7 +20,9 @@ Dependencies:
 hugo >= v0.80.0
 ```
 
-pneuma is built with the wonderful [tcell](https://github.com/gdamore/tcell) package by [Garret D'Amore](https://github.com/gdamore/tcell).
+The now shelved TUI for hydra was built with the wonderful
+[tcell](https://github.com/gdamore/tcell) package by [Garret
+D'Amore](https://github.com/gdamore/tcell).
 
 ## Installation
 
@@ -28,7 +30,10 @@ _TBC_
 
 ### Configuration
 
-Currently, pneuma does not have a configuration wizard, but it automatically loads the configuration file at `~/.config/pneuma.json`. The config file itself is very straighforward:
+Currently, hydra does not have a configuration wizard, but it automatically
+loads the configuration file at `~/.config/hydra.json`. The config file itself
+is very straightforward:
+
 ``` json
 {   "extension": "org",
     "editor":"/path/to/editor",
@@ -49,12 +54,12 @@ make run
 or 
 ```
 make build
-./bin/pneuma
+./bin/hydra
 ```
 
 ### Running tests
 
-If you are hacking on pneuma, there are some useful make rules to know about:
+If you are hacking on hydra, there are some useful make rules to know about:
 
 * `make test`: runs `go test` for every file
 * `make verify`: runs `golint` for the project
@@ -66,3 +71,13 @@ No PRs will be accepted at this time, but you are more than welcome to open issu
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](./LICENSE) file for details.
+
+
+## Default vs Interactive mode
+
+By default, hydra lists posts to stdout and parses arguments to perform actions.
+
+Interactive-mode waits for user prompts until quit.
+
+The TUI mode is shelved for now, in favor of focusing on end-to-end usability
+without getting bogged down into developing a TUI with good UX.

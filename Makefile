@@ -1,5 +1,5 @@
 OUTDIR=bin
-TARGET=pneuma
+TARGET=hydra
 
 build:
 	go build -o ./$(OUTDIR)/$(TARGET) $(TARGET).go
@@ -18,6 +18,3 @@ verify:
 
 prep: test verify
 	go mod tidy
-	
-	
-
