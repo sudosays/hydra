@@ -16,15 +16,20 @@ import (
 )
 
 type HydraConfig struct {
-	Extension string     `json:"extension"`
-	Editor    string     `json:"editor"`
-	Sites     []HugoSite `json:"sites"`
+	Extension string        `json:"extension"`
+	Editor    EditorCommand `json:"editor"`
+	Sites     []HugoSite    `json:"sites"`
 }
 
 // HugoSite contains the information for a hugo site listed in the config
 type HugoSite struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
+}
+
+type EditorCommand struct {
+	Command string `json:"command"`
+	Args    string `json:"args"`
 }
 
 func check(e error) {
@@ -120,7 +125,7 @@ func readConfig(path string) (HydraConfig, error) {
 }
 
 func startEditor(path string) {
-	editorCmd := exec.Command(config.Editor, path)
+	editorCmd := exec.Command(config.Editor.Command, config.Editor.Args, path)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
 	ui.Suspend()
@@ -154,7 +159,7 @@ func siteOverview(site hugo.Blog) {
 		ui.Draw()
 		title := ui.WaitForInput()
 		if title != "" {
-			filePath := site.NewPost(title)
+			filePath := site.NewPost(title, config.Extension)
 			startEditor(filePath)
 			posts = site.Posts
 			headings, postList := genPostList(site)

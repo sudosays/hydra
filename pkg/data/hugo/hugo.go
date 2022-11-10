@@ -49,15 +49,14 @@ func Load(path string) Blog {
 // NewPost takes a title string and creates a new blog post before returning
 // the path to the created file. Important: for now, the default is to make a
 // new blog post in `$SITE_PATH/content/blog`
-func (blog *Blog) NewPost(title string) string {
+func (blog *Blog) NewPost(title string, extension string) string {
 	os.Chdir(blog.Path)
 
-	ext := ".md"
 	filename := strings.ToLower(title)
 	filename = strings.TrimSpace(filename)
 	filename = strings.ReplaceAll(filename, " ", "-")
 	filename = strings.ReplaceAll(filename, ":", "")
-	filePath := fmt.Sprintf("%s/%s%s", "blog", filename, ext)
+	filePath := fmt.Sprintf("%s/%s%s", "blog", filename, extension)
 
 	newPostCmd := exec.Command("hugo", "new", filePath)
 	postPathRaw, err := newPostCmd.Output()
