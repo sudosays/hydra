@@ -35,8 +35,12 @@ loads the configuration file at `~/.config/hydra.json`. The config file itself
 is very straightforward:
 
 ``` json
-{   "extension": "org",
-    "editor":"/path/to/editor",
+{   
+    "extension": "org",
+    "editor":{
+        "command": "/path/to/editor",
+        "args": ""
+    },
     "sites": [
         {"name":"Site one", "path":"/path/to/site/"},
         {"name":"Site two", "path":"/path/to/site2/"}
