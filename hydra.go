@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/sudosays/hydra/internal/git"
 	"github.com/sudosays/hydra/pkg/data/hugo"
 	"io/ioutil"
 	"os"
@@ -48,33 +49,23 @@ func init() {
 
 func main() {
 
+	clearTerm()
 	// Setup to parse args
 	blog := hugo.Load(config.Sites[0].Path)
-	header, list := genPostList(blog)
 
-	for _, col := range header {
-		fmt.Print(col + "\t")
+	if git.IsRepo() {
+		go git.Update()
 	}
-
-	fmt.Println()
-
-	for _, post := range list {
-		for _, col := range post {
-			fmt.Print(col + "\t")
-		}
-
-		fmt.Print("\n")
-
-	}
-
 	// main REPL
 	for {
+		printPostList(blog)
 		fmt.Println("\nWhat would you like to do?\nCommands: [n]ew [e]dit [p]ublish [s]ync [q]uit")
 		fmt.Print("> ")
 		input := bufio.NewReader(os.Stdin)
 		command, err := input.ReadString('\n')
 		check(err)
 		parseCommand(command)
+		clearTerm()
 	}
 }
 
@@ -130,3 +121,43 @@ func parseCommand(cmd string) {
 		os.Exit(0)
 	}
 }
+
+func printPostList(blog hugo.Blog) {
+	header, list := genPostList(blog)
+
+	for _, col := range header {
+		fmt.Print(col + "\t")
+	}
+
+	fmt.Println()
+
+	for _, post := range list {
+		for _, col := range post {
+			fmt.Print(col + "\t")
+		}
+
+		fmt.Print("\n")
+
+	}
+}
+
+func clearTerm() {
+	fmt.Print("\033[H\033[2J")
+}
+
+// func printLogo() {
+
+// 	logoText := `
+//  /$$                       /$$
+// | $$                      | $$
+// | $$$$$$$  /$$   /$$  /$$$$$$$  /$$$$$$  /$$$$$$
+// | $$__  $$| $$  | $$ /$$__  $$ /$$__  $$|____  $$
+// | $$  \ $$| $$  | $$| $$  | $$| $$  \__/ /$$$$$$$
+// | $$  | $$| $$  | $$| $$  | $$| $$      /$$__  $$
+// | $$  | $$|  $$$$$$$|  $$$$$$$| $$     |  $$$$$$$
+// |__/  |__/ \____  $$ \_______/|__/      \_______/
+//            /$$  | $$
+//           |  $$$$$$/
+//            \______/
+// `
+// }
