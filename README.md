@@ -3,15 +3,22 @@
 The aim of hydra is to keep it simple and clean, but still provide a slick
 blogging experience.
 
+Currently, the interface is a very basic REPL with ideas to have a TUI in the future.
+
 ## Roadmap
-* [X] Load and display posts
-* [X] Edit posts from list
-* [X] Manage multiple sites specified in config file
-* [X] Create new posts
-* [ ] Publish drafts from post list
-* [ ] Github pages deploy
+* [x] Load and display posts
+* [x] Edit posts from list
+* [x] Manage multiple sites specified in config file
+* [x] Create new posts
+* [x] Delete posts
 * [ ] Browse/sort by date, draft status
+
+Future features:
+* [ ] Publish drafts from post list
+* [ ] Synchronise using Git
+    * [ ] Github pages deploy
 * [ ] Tag/category manager
+* [ ] Interactive TUI 
 
 ## Prerequisites
 
@@ -24,19 +31,19 @@ The now shelved TUI for hydra was built with the wonderful
 [tcell](https://github.com/gdamore/tcell) package by [Garret
 D'Amore](https://github.com/gdamore/tcell).
 
-## Installation
-
-_TBC_
-
-### Configuration
+## Configuration
 
 Currently, hydra does not have a configuration wizard, but it automatically
 loads the configuration file at `~/.config/hydra.json`. The config file itself
 is very straightforward:
 
 ``` json
-{   "extension": "org",
-    "editor":"/path/to/editor",
+{   
+    "extension": "org",
+    "editor":{
+        "command": "/path/to/editor",
+        "args": ""
+    },
     "sites": [
         {"name":"Site one", "path":"/path/to/site/"},
         {"name":"Site two", "path":"/path/to/site2/"}
@@ -45,6 +52,15 @@ is very straightforward:
 ```
 
 Note: the name of the site in the config file can be any name that you choose. It is there to help you distinguish between different sites.
+
+
+## Installation
+
+If you have added the Go install directory to your `$PATH` then installation is as easy as:
+
+```
+go install
+```
 
 ## Usage
 
@@ -71,13 +87,3 @@ No PRs will be accepted at this time, but you are more than welcome to open issu
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](./LICENSE) file for details.
-
-
-## Default vs Interactive mode
-
-By default, hydra lists posts to stdout and parses arguments to perform actions.
-
-Interactive-mode waits for user prompts until quit.
-
-The TUI mode is shelved for now, in favor of focusing on end-to-end usability
-without getting bogged down into developing a TUI with good UX.

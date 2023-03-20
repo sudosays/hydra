@@ -1,30 +1,36 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
-	"github.com/gdamore/tcell/v2"
-	libui "github.com/sudosays/hydra/internal/ui"
 	"github.com/sudosays/hydra/pkg/data/hugo"
 	"io/ioutil"
-	//"log"
+	"math"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type HydraConfig struct {
-	Extension string     `json:"extension"`
-	Editor    string     `json:"editor"`
-	Sites     []HugoSite `json:"sites"`
+	Extension string        `json:"extension"`
+	Editor    EditorCommand `json:"editor"`
+	Sites     []HugoSite    `json:"sites"`
 }
 
 // HugoSite contains the information for a hugo site listed in the config
 type HugoSite struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
+}
+
+type EditorCommand struct {
+	Command string `json:"command"`
+	Args    string `json:"args"`
 }
 
 func check(e error) {
@@ -34,76 +40,42 @@ func check(e error) {
 }
 
 var config HydraConfig
-var ui libui.HydraUI
+
+var currentPageIndex int = 1 // For pagination purposes
+var numPages int = 0
+
+const maxItemsPerPage int = 10
 
 func init() {
-	home, err := os.UserHomeDir()
-	configPath := path.Join(home, ".config", "hydra.json")
+
+	userHomePath, err := os.UserHomeDir()
+	defaultConfigFilePath := path.Join(userHomePath, ".config", "hydra.json")
+
+	// Parse command line flags if any
+	configFilePath := flag.String("config", defaultConfigFilePath, "Path to a config file")
+
+	config, err = readConfig(*configFilePath)
 	check(err)
-	config, err = readConfig(configPath)
-	check(err)
-	ui = libui.Init()
+
 }
 
 func main() {
-	quitCmdEventKey := libui.CommandKey{
-		Key:  tcell.KeyRune,
-		Rune: 'q',
-		Mod:  tcell.ModNone,
-	}
-	cmds := make(map[libui.CommandKey]libui.Command)
-	cmds[quitCmdEventKey] = libui.Command{Callback: quit, Description: "Quit"}
-	ui.SetCommands(cmds)
 
-	var site hugo.Blog
-	if len(config.Sites) > 1 {
-		site = siteSelect()
-	} else {
-		site = hugo.Load(config.Sites[0].Path)
-	}
+	clearTerm()
+	// Setup to parse args
+	blog := hugo.Load(config.Sites[0].Path)
 
-	siteOverview(site)
+	// Calculate the number of pages
+	numPages = int(math.Ceil(float64(len(blog.Posts)) / float64(maxItemsPerPage)))
+
+	// main REPL
 	for {
-		ui.Tick()
+		printPostList(blog)
+		command := promptUser("\nWhat would you like to do?\n" +
+			"Commands: [a]dd [e]dit [d]elete [n]ext/[p]rev page [q]uit\n> ")
+		blog = parseCommand(command, blog)
+		clearTerm()
 	}
-
-}
-
-func siteSelect() hugo.Blog {
-	ui.Reset()
-	ui.AddLabel(0, 0, "Sites from config:")
-
-	headings := []string{"Choice", "Name", "Path"}
-
-	var sitesList [][]string
-	for i, site := range config.Sites {
-		sitesList = append(sitesList, []string{fmt.Sprintf("%d", i+1), site.Name, site.Path})
-	}
-	ui.AddTable(0, 2, headings, sitesList)
-	prompt := "Please choose a site (default=1): "
-	ui.AddLabel(0, 4+len(sitesList), prompt)
-	ui.MoveCursor(len(prompt), 3+len(sitesList))
-	ui.Draw()
-
-	siteSelect := getSelection(len(sitesList))
-
-	site := hugo.Load(config.Sites[siteSelect].Path)
-	return site
-}
-
-func getSelection(max int) int {
-	selection := 0
-	input := ui.WaitForInput()
-	choice, err := strconv.Atoi(input)
-	if err == nil {
-		choice--
-		if choice > 0 && choice <= max {
-			selection = choice
-		} else {
-			check(err)
-		}
-	}
-	return selection
 }
 
 func readConfig(path string) (HydraConfig, error) {
@@ -112,93 +84,26 @@ func readConfig(path string) (HydraConfig, error) {
 	check(err)
 	byteValue, err := ioutil.ReadAll(configFile)
 	check(err)
-	fmt.Printf("%s", byteValue)
-	json.Unmarshal(byteValue, &conf)
-	fmt.Printf("Config is: %+v", conf)
+	//fmt.Printf("%s", byteValue)
+	err = json.Unmarshal(byteValue, &conf)
+	check(err)
+	//fmt.Printf("Config is: %+v\n", conf)
 	configFile.Close()
 	return conf, nil
 }
 
 func startEditor(path string) {
-	editorCmd := exec.Command(config.Editor, path)
+	editorCmd := exec.Command(config.Editor.Command, config.Editor.Args, path)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
-	ui.Suspend()
 	err := editorCmd.Run()
-	ui.Resume()
 	check(err)
-}
-
-func siteOverview(site hugo.Blog) {
-	ui.Reset()
-	posts := site.Posts
-	headings, postList := genPostList(site)
-
-	ui.AddLabel(0, 0, "Posts from the blog:")
-	table := ui.AddTable(0, 1, headings, postList)
-	prompt := "Select a post to edit: "
-	ui.AddLabel(0, 4+len(postList), prompt)
-	ui.Draw()
-
-	ui.MoveCursor(len(prompt), 3+len(postList))
-
-	editPost := func() {
-		path := posts[table.Index].Path
-		startEditor(path)
-	}
-
-	newPost := func() {
-		prompt := "Enter a title for the new post:"
-		ui.AddLabel(0, 4+len(postList), prompt)
-		ui.MoveCursor(len(prompt), 4+len(postList))
-		ui.Draw()
-		title := ui.WaitForInput()
-		if title != "" {
-			filePath := site.NewPost(title)
-			startEditor(filePath)
-			posts = site.Posts
-			headings, postList := genPostList(site)
-			table.SetContent(headings, postList)
-		}
-	}
-
-	deletePost := func() {
-		if ui.Confirm("Delete post? [y/N]: ") {
-			path := posts[table.Index].Path
-			site.DeletePost(path)
-			headings, postList := genPostList(site)
-			table.SetContent(headings, postList)
-		}
-	}
-
-	nextCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'j', Mod: tcell.ModNone}
-	prevCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'k', Mod: tcell.ModNone}
-	quitCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'q', Mod: tcell.ModNone}
-	enterCmdEventKey := libui.CommandKey{Key: tcell.KeyEnter, Rune: rune(13), Mod: tcell.ModNone}
-	syncCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 's', Mod: tcell.ModNone}
-	newCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'n', Mod: tcell.ModNone}
-	deleteCmdEventKey := libui.CommandKey{Key: tcell.KeyRune, Rune: 'd', Mod: tcell.ModNone}
-
-	cmds := make(map[libui.CommandKey]libui.Command)
-	cmds[quitCmdEventKey] = libui.Command{Callback: quit, Description: "Quit"}
-	cmds[nextCmdEventKey] = libui.Command{Callback: table.NextItem, Description: "Next item"}
-	cmds[prevCmdEventKey] = libui.Command{Callback: table.PreviousItem, Description: "Prev item"}
-	cmds[enterCmdEventKey] = libui.Command{Callback: editPost, Description: "Edit post"}
-	cmds[syncCmdEventKey] = libui.Command{Callback: site.Synchronise, Description: "Sync"}
-	cmds[newCmdEventKey] = libui.Command{Callback: newPost, Description: "Create a new post"}
-	cmds[deleteCmdEventKey] = libui.Command{Callback: deletePost, Description: "Delete a post"}
-
-	ui.SetCommands(cmds)
-}
-
-func quit() {
-	ui.Close()
 }
 
 func genPostList(blog hugo.Blog) ([]string, [][]string) {
 
 	posts := blog.Posts
-	headings := []string{"#", "Date", "Title", "Draft"}
+	headings := []string{"#", "Date", "Draft", "Title"}
 	var postList [][]string
 
 	for i, post := range posts {
@@ -208,8 +113,113 @@ func genPostList(blog hugo.Blog) ([]string, [][]string) {
 		}
 		datetime, _ := time.Parse(time.RFC3339, post.Date)
 		date := datetime.Format("2006/01/02")
-		postList = append(postList, []string{fmt.Sprintf("%d", i+1), date, post.Title, draftStatus})
+		postList = append(
+			postList,
+			[]string{fmt.Sprintf("%d", i+1), date, draftStatus, post.Title})
 	}
 
 	return headings, postList
+}
+
+func parseCommand(cmd string, blog hugo.Blog) hugo.Blog {
+	parts := strings.Split(cmd, " ")
+	switch parts[0][0] {
+	case 'e':
+		index := -1
+		if len(parts) > 1 {
+			// startEditor
+			i, err := strconv.Atoi(strings.Trim(parts[1], "\n\r "))
+			check(err)
+			index = i
+
+		} else {
+			i, err := strconv.Atoi(strings.Trim(promptUser("Enter a post number to edit:\n> "), "\n\r "))
+			check(err)
+			index = i
+		}
+		if index > 0 && index < len(blog.Posts) {
+			startEditor(blog.Posts[index-1].Path)
+		}
+	case 'a':
+		title := ""
+		if len(parts) > 1 {
+			// Call creation of new post with title given
+			title = strings.Join(parts[1:], " ")
+		} else {
+			title = promptUser("Please enter a title for the post:\n> ")
+		}
+		fmt.Println("Attempting to create post with title: %s", title)
+		postPath := blog.NewPost(title, config.Extension)
+		startEditor(postPath)
+	case 'd':
+		// Ask for confirmation first
+		// Possibly: add a hugo 'trash' folder in future for soft deletion.
+		i, err := strconv.Atoi(strings.Trim(parts[1], "\n\r "))
+		check(err)
+		post := blog.Posts[i-1]
+		warn := "WARNING: You are about to delete the post titled '%s'.\nThis action is irreversible, especially if the post has not been synchronised with git.\nProceed? [y/N] Default: N.\n> "
+		ans := promptUser(fmt.Sprintf(warn, post.Title))
+		if ans[0] == 'y' {
+			blog.DeletePost(post.Path)
+		}
+	case 'n':
+		if currentPageIndex < numPages {
+			currentPageIndex++
+		}
+	case 'p':
+		if currentPageIndex > 1 {
+			currentPageIndex--
+		}
+	case 'q':
+		clearTerm()
+		fmt.Println("You have slain the hydra...")
+		os.Exit(0)
+	}
+
+	return blog
+}
+
+func promptUser(prompt string) string {
+	fmt.Print(prompt)
+	input := bufio.NewReader(os.Stdin)
+	ans, err := input.ReadString('\n')
+	check(err)
+	return ans
+}
+
+func printPostList(blog hugo.Blog) {
+	// We might want to paginate the number of blog posts
+	// Currently we will set the max to 10 posts per page
+
+	header, list := genPostList(blog)
+
+	for _, col := range header {
+		fmt.Print(col + "\t")
+	}
+
+	fmt.Println()
+
+	startPostIndex := (currentPageIndex - 1) * maxItemsPerPage
+	endPostIndex := startPostIndex + maxItemsPerPage // Possibly longer than len(list)
+	if endPostIndex > len(list) {
+		endPostIndex = len(list)
+	}
+
+	pageList := list[startPostIndex:endPostIndex]
+
+	for _, post := range pageList {
+		for _, col := range post {
+			fmt.Print(col + "\t")
+		}
+
+		fmt.Print("\n")
+
+	}
+
+	fmt.Printf("Showing [%d-%d]", startPostIndex+1, endPostIndex)
+	fmt.Printf(" | Page %d of %d\n", currentPageIndex, numPages)
+}
+
+func clearTerm() {
+	fmt.Print("\033[H\033[2J")
 }

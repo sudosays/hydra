@@ -1,4 +1,4 @@
-module github.com/sudosays/pneuma
+module github.com/sudosays/hydra
 
 go 1.15
 
