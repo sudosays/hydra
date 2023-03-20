@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/sudosays/hydra/internal/git"
 	"github.com/sudosays/hydra/pkg/data/hugo"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -43,6 +41,11 @@ func check(e error) {
 
 var config HydraConfig
 
+var currentPageIndex int = 1 // For pagination purposes
+var numPages int = 0
+
+const maxItemsPerPage int = 10
+
 func init() {
 
 	userHomePath, err := os.UserHomeDir()
@@ -53,6 +56,7 @@ func init() {
 
 	config, err = readConfig(*configFilePath)
 	check(err)
+
 }
 
 func main() {
@@ -61,15 +65,14 @@ func main() {
 	// Setup to parse args
 	blog := hugo.Load(config.Sites[0].Path)
 
-	if git.IsRepo() {
-		go git.Update()
-	}
+	// Calculate the number of pages
+	numPages = int(math.Ceil(float64(len(blog.Posts)) / float64(maxItemsPerPage)))
 
 	// main REPL
 	for {
 		printPostList(blog)
 		command := promptUser("\nWhat would you like to do?\n" +
-			"Commands: [n]ew [e]dit [d]elete [p]ublish [s]ync [q]uit\n> ")
+			"Commands: [a]dd [e]dit [d]elete [n]ext/[p]rev page [q]uit\n> ")
 		blog = parseCommand(command, blog)
 		clearTerm()
 	}
@@ -137,7 +140,7 @@ func parseCommand(cmd string, blog hugo.Blog) hugo.Blog {
 		if index > 0 && index < len(blog.Posts) {
 			startEditor(blog.Posts[index-1].Path)
 		}
-	case 'n':
+	case 'a':
 		title := ""
 		if len(parts) > 1 {
 			// Call creation of new post with title given
@@ -159,14 +162,14 @@ func parseCommand(cmd string, blog hugo.Blog) hugo.Blog {
 		if ans[0] == 'y' {
 			blog.DeletePost(post.Path)
 		}
-	case 's':
-		// Synchronise
-		// Options:
-		// 1) synchronise the repo only with the source code
-		// 2) run "hugo" and publish the website code/repo found in ./public
-		//
-		log.Println("Attempting to sync repository")
-		git.Sync()
+	case 'n':
+		if currentPageIndex < numPages {
+			currentPageIndex++
+		}
+	case 'p':
+		if currentPageIndex > 1 {
+			currentPageIndex--
+		}
 	case 'q':
 		clearTerm()
 		fmt.Println("You have slain the hydra...")
@@ -188,11 +191,7 @@ func printPostList(blog hugo.Blog) {
 	// We might want to paginate the number of blog posts
 	// Currently we will set the max to 10 posts per page
 
-	maxItemsPerPage := 10.0
-
 	header, list := genPostList(blog)
-
-	numPages := int(math.Ceil(float64(len(list)) / float64(maxItemsPerPage)))
 
 	for _, col := range header {
 		fmt.Print(col + "\t")
@@ -200,7 +199,15 @@ func printPostList(blog hugo.Blog) {
 
 	fmt.Println()
 
-	for _, post := range list[:10] {
+	startPostIndex := (currentPageIndex - 1) * maxItemsPerPage
+	endPostIndex := startPostIndex + maxItemsPerPage // Possibly longer than len(list)
+	if endPostIndex > len(list) {
+		endPostIndex = len(list)
+	}
+
+	pageList := list[startPostIndex:endPostIndex]
+
+	for _, post := range pageList {
 		for _, col := range post {
 			fmt.Print(col + "\t")
 		}
@@ -209,26 +216,10 @@ func printPostList(blog hugo.Blog) {
 
 	}
 
-	fmt.Printf("Page 1 of %d\n", numPages)
+	fmt.Printf("Showing [%d-%d]", startPostIndex+1, endPostIndex)
+	fmt.Printf(" | Page %d of %d\n", currentPageIndex, numPages)
 }
 
 func clearTerm() {
 	fmt.Print("\033[H\033[2J")
 }
-
-// func printLogo() {
-
-// 	logoText := `
-//  /$$                       /$$
-// | $$                      | $$
-// | $$$$$$$  /$$   /$$  /$$$$$$$  /$$$$$$  /$$$$$$
-// | $$__  $$| $$  | $$ /$$__  $$ /$$__  $$|____  $$
-// | $$  \ $$| $$  | $$| $$  | $$| $$  \__/ /$$$$$$$
-// | $$  | $$| $$  | $$| $$  | $$| $$      /$$__  $$
-// | $$  | $$|  $$$$$$$|  $$$$$$$| $$     |  $$$$$$$
-// |__/  |__/ \____  $$ \_______/|__/      \_______/
-//            /$$  | $$
-//           |  $$$$$$/
-//            \______/
-// `
-// }
