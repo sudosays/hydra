@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -26,7 +27,7 @@ type Post struct {
 
 func check(err error) {
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 
@@ -50,26 +51,34 @@ func Load(path string) Blog {
 // the path to the created file. Important: for now, the default is to make a
 // new blog post in `$SITE_PATH/content/blog`
 func (blog *Blog) NewPost(title string, extension string) string {
+	log.Printf("Attempting to add post with title: %s, and extension %s\n", title, extension)
 	os.Chdir(blog.Path)
+	log.Printf("Path changed to: %s\n", blog.Path)
 
 	filename := strings.ToLower(title)
 	filename = strings.TrimSpace(filename)
 	filename = strings.ReplaceAll(filename, " ", "-")
 	filename = strings.ReplaceAll(filename, ":", "")
-	filePath := fmt.Sprintf("%s/%s%s", "blog", filename, extension)
+	filePath := fmt.Sprintf("%s/%s.%s", "blog", filename, extension)
+	log.Printf("Post file path is: %s\n", filePath)
 
 	newPostCmd := exec.Command("hugo", "new", filePath)
 	postPathRaw, err := newPostCmd.Output()
 	postPath := string(postPathRaw)
 	postPath = strings.Split(postPath, " ")[0]
+	log.Printf("Post path from command result is: %s\n", postPath)
 	check(err)
 
 	blog.Posts = loadPosts()
 
-	return postPath
+	return blog.Posts[0].Path
 }
 
 func loadPosts() []Post {
+	/// TODO find a way to partially reload the posts in a blog?
+	/// Times when effective:
+	/// 	a) deleting a post
+	/// 	b) creating a post
 	var posts []Post
 	hugoListCmd := exec.Command("hugo", "list", "all")
 	rawPostList, err := hugoListCmd.Output()
