@@ -33,6 +33,13 @@ type EditorCommand struct {
 	Args    string `json:"args"`
 }
 
+type FilterArgs struct {
+	Sections  []string
+	Draft     bool
+	Published bool
+	// DateBefore, DateAfter
+}
+
 func check(e error) {
 	if e != nil {
 		panic(e)
@@ -68,12 +75,13 @@ func main() {
 	// Calculate the number of pages
 	numPages = int(math.Ceil(float64(len(blog.Posts)) / float64(maxItemsPerPage)))
 
+	posts := blog.Posts
 	// main REPL
 	for {
-		printPostList(blog)
+		printPostList(posts)
 		command := promptUser("\nWhat would you like to do?\n" +
 			"Commands: [a]dd [e]dit [d]elete [n]ext/[p]rev page [q]uit\n> ")
-		blog = parseCommand(command, blog)
+		posts = parseCommand(command, blog)
 		clearTerm()
 	}
 }
@@ -100,28 +108,7 @@ func startEditor(path string) {
 	check(err)
 }
 
-func genPostList(blog hugo.Blog) ([]string, [][]string) {
-
-	posts := blog.Posts
-	headings := []string{"#", "Date", "Draft", "Title"}
-	var postList [][]string
-
-	for i, post := range posts {
-		draftStatus := "False"
-		if post.Draft {
-			draftStatus = "True"
-		}
-		datetime, _ := time.Parse(time.RFC3339, post.Date)
-		date := datetime.Format("2006/01/02")
-		postList = append(
-			postList,
-			[]string{fmt.Sprintf("%d", i+1), date, draftStatus, post.Title})
-	}
-
-	return headings, postList
-}
-
-func parseCommand(cmd string, blog hugo.Blog) hugo.Blog {
+func parseCommand(cmd string, blog hugo.Blog) []hugo.Post {
 	parts := strings.Split(cmd, " ")
 	switch parts[0][0] {
 	case 'e':
@@ -170,13 +157,19 @@ func parseCommand(cmd string, blog hugo.Blog) hugo.Blog {
 		if currentPageIndex > 1 {
 			currentPageIndex--
 		}
+	case 'f':
+		// filtering
+		// format/commands?
+		// 'd' : toggle drafts-only
+		// 'p' : toggle published-only
+		// 's <section name>' : filter section by name (show only section), 's all' or 's' restore
+
 	case 'q':
 		clearTerm()
 		fmt.Println("You have slain the hydra...")
 		os.Exit(0)
 	}
-
-	return blog
+	return blog.Posts
 }
 
 func promptUser(prompt string) string {
@@ -187,37 +180,45 @@ func promptUser(prompt string) string {
 	return ans
 }
 
-func printPostList(blog hugo.Blog) {
+func printPostList(posts []hugo.Post) {
 	// We might want to paginate the number of blog posts
 	// Currently we will set the max to 10 posts per page
 
-	header, list := genPostList(blog)
+	fmtString := "%3s %-12s %-6s %-15s"
 
-	for _, col := range header {
-		fmt.Print(col + "\t")
-	}
-
-	fmt.Println()
+	fmt.Printf(fmtString, "#", "Date", "Draft", "Title")
+	fmt.Print("\n")
+	fmt.Println(strings.Repeat("-", 50))
 
 	startPostIndex := (currentPageIndex - 1) * maxItemsPerPage
 	endPostIndex := startPostIndex + maxItemsPerPage // Possibly longer than len(list)
-	if endPostIndex > len(list) {
-		endPostIndex = len(list)
+	if endPostIndex > len(posts) {
+		endPostIndex = len(posts)
 	}
 
-	pageList := list[startPostIndex:endPostIndex]
+	pageList := posts[startPostIndex:endPostIndex]
 
-	for _, post := range pageList {
-		for _, col := range post {
-			fmt.Print(col + "\t")
+	for i, post := range pageList {
+		draftStatus := ""
+		if post.Draft {
+			draftStatus = "D"
+		}
+		datetime, _ := time.Parse(time.RFC3339, post.Date)
+		date := datetime.Format("2006/01/02")
+
+		title := post.Title
+		if len(title) > 30 {
+			title = title[:26]
+			title += "..."
 		}
 
+		fmt.Printf(fmtString, strconv.Itoa(startPostIndex+i+1), date, draftStatus, title)
 		fmt.Print("\n")
 
 	}
 
-	fmt.Printf("Showing [%d-%d]", startPostIndex+1, endPostIndex)
-	fmt.Printf(" | Page %d of %d\n", currentPageIndex, numPages)
+	fmt.Printf("( Showing [%d-%d]", startPostIndex+1, endPostIndex)
+	fmt.Printf(" | Page %d of %d )\n", currentPageIndex, numPages)
 }
 
 func clearTerm() {
