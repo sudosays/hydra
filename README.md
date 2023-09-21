@@ -14,6 +14,7 @@ Currently, the interface is a very basic REPL with ideas to have a TUI in the fu
 * [ ] Browse/sort by date, draft status
 
 Future features:
+* [ ] Search titles/content with fd and ripgrep
 * [ ] Publish drafts from post list
 * [ ] Synchronise using Git
     * [ ] Github pages deploy
