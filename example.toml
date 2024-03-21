@@ -1,0 +1,11 @@
+extension = "org"
+
+[editor]
+
+command = "emacsclient"
+args = "-c"
+
+[sites.main]
+
+name = "Personal"
+path = "/path/to/hugo/dir"

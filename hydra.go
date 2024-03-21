@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"github.com/sudosays/hydra/pkg/data/hugo"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -17,20 +18,20 @@ import (
 )
 
 type HydraConfig struct {
-	Extension string        `json:"extension"`
-	Editor    EditorCommand `json:"editor"`
-	Sites     []HugoSite    `json:"sites"`
+	Extension string              `toml:"extension"`
+	Editor    EditorCommand       `toml:"editor"`
+	Sites     map[string]HugoSite `toml:"sites"`
 }
 
 // HugoSite contains the information for a hugo site listed in the config
 type HugoSite struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
+	Name string `toml:"name"`
+	Path string `toml:"path"`
 }
 
 type EditorCommand struct {
-	Command string `json:"command"`
-	Args    string `json:"args"`
+	Command string `toml:"command"`
+	Args    string `toml:"args"`
 }
 
 type FilterArgs struct {
@@ -60,9 +61,12 @@ func init() {
 
 	// Parse command line flags if any
 	configFilePath := flag.String("config", defaultConfigFilePath, "Path to a config file")
+	flag.Parse()
 
 	config, err = readConfig(*configFilePath)
 	check(err)
+
+	fmt.Printf("[Config editor] Command: %v; Args: %v;\n", config.Editor.Command, config.Editor.Args)
 
 }
 
@@ -70,7 +74,7 @@ func main() {
 
 	clearTerm()
 	// Setup to parse args
-	blog := hugo.Load(config.Sites[0].Path)
+	blog := hugo.Load(config.Sites["main"].Path)
 
 	// Calculate the number of pages
 	numPages = int(math.Ceil(float64(len(blog.Posts)) / float64(maxItemsPerPage)))
@@ -93,9 +97,10 @@ func readConfig(path string) (HydraConfig, error) {
 	byteValue, err := ioutil.ReadAll(configFile)
 	check(err)
 	//fmt.Printf("%s", byteValue)
-	err = json.Unmarshal(byteValue, &conf)
+	if _, err = toml.Decode(string(byteValue), &conf); err != nil {
+		log.Fatal(err)
+	}
 	check(err)
-	//fmt.Printf("Config is: %+v\n", conf)
 	configFile.Close()
 	return conf, nil
 }
