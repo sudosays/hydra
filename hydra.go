@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/sudosays/hydra/internal/types"
 	"github.com/sudosays/hydra/internal/ui"
 	"github.com/sudosays/hydra/pkg/data/hugo"
 	"io/ioutil"
@@ -14,42 +15,13 @@ import (
 	"path"
 )
 
-type HydraConfig struct {
-	Extension string              `toml:"extension"`
-	Editor    EditorCommand       `toml:"editor"`
-	Sites     map[string]HugoSite `toml:"sites"`
-}
-
-// HugoSite contains the information for a hugo site listed in the config
-type HugoSite struct {
-	Name string `toml:"name"`
-	Path string `toml:"path"`
-}
-
-type EditorCommand struct {
-	Command string `toml:"command"`
-	Args    string `toml:"args"`
-}
-
-type FilterArgs struct {
-	Sections  []string
-	Draft     bool
-	Published bool
-	// DateBefore, DateAfter
-}
-
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
-var config HydraConfig
-
-var currentPageIndex int = 1 // For pagination purposes
-var numPages int = 0
-
-const maxItemsPerPage int = 10
+var config types.HydraConfig
 
 func init() {
 
@@ -73,9 +45,7 @@ func main() {
 
 	blog := hugo.Load(config.Sites["main"].Path)
 
-	posts := blog.Posts
-
-	p := tea.NewProgram(ui.InitialModel(posts))
+	p := tea.NewProgram(ui.InitialModel(blog, config.Editor))
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("An error has occurred: %v", err)
 		os.Exit(1)
@@ -86,8 +56,8 @@ func main() {
 	fmt.Println("You have slain the hydra...")
 }
 
-func readConfig(path string) (HydraConfig, error) {
-	conf := HydraConfig{}
+func readConfig(path string) (types.HydraConfig, error) {
+	conf := types.HydraConfig{}
 	configFile, err := os.Open(path)
 	check(err)
 	byteValue, err := ioutil.ReadAll(configFile)
