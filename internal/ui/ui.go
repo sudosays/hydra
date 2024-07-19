@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/sudosays/hydra/internal/types"
 	"github.com/sudosays/hydra/pkg/data/hugo"
 	// "log"
@@ -150,7 +151,48 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	return m.table.View() + "\nCommands: [q]uit [n]ew [e]dit [f]ilter\n" + m.input.View()
+
+	var inputStyle lipgloss.Style
+
+	if !m.focusTable {
+		inputStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("228")).
+			BorderTop(true).
+			BorderLeft(true).
+			BorderRight(true).
+			BorderBottom(true).
+			Width(52)
+	} else {
+		inputStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#666")).
+			Foreground(lipgloss.Color("#666")).
+			BorderTop(true).
+			BorderLeft(true).
+			BorderRight(true).
+			BorderBottom(true).
+			Width(52)
+	}
+
+	statusStyle := lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#666")).
+		Foreground(lipgloss.Color("#666")).
+		BorderTop(true).
+		BorderLeft(true).
+		BorderRight(true).
+		BorderBottom(true).
+		Width(80).
+		MarginBottom(1).
+		Align(lipgloss.Center)
+
+	return lipgloss.JoinVertical(0,
+		statusStyle.Render("HYDRA v0.2"),
+		m.table.View(),
+		"Commands: [q]uit [n]ew [e]dit cycle [v]iew\n",
+		inputStyle.Render(m.input.View()))
+
 }
 
 func (m model) startEditor(path string) tea.Cmd {
