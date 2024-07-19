@@ -127,3 +127,24 @@ func (blog *Blog) DeletePost(deletePath string) error {
 	blog.Posts = loadPosts()
 	return err
 }
+
+// Selects only the draft posts
+func (blog Blog) DraftPosts() []Post {
+	return filterDraftsOnly(filterBySection(blog.Posts, "blog"))
+}
+
+func filterDraftsOnly(posts []Post) []Post {
+	draftPosts := []Post{}
+	for _, p := range posts {
+		if p.Draft {
+			draftPosts = append(draftPosts, p)
+		}
+	}
+
+	return draftPosts
+}
+
+func filterBySection(posts []Post, section string) []Post {
+	return posts
+
+}

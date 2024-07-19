@@ -21,13 +21,22 @@ type model struct {
 	editing         bool
 	altScreenActive bool
 	focusTable      bool
+	draftsOnly      bool
 }
 
 type editorFinishedMsg struct{ err error }
 
 func InitialModel(blog hugo.Blog, editorCmd types.EditorCommand) model {
 
-	posts := blog.Posts
+	draftsOnly := true
+
+	posts := []hugo.Post{}
+
+	if draftsOnly {
+		posts = blog.DraftPosts()
+	} else {
+		posts = blog.Posts
+	}
 
 	columns := []table.Column{
 		{Title: "#", Width: 4},
@@ -36,17 +45,7 @@ func InitialModel(blog hugo.Blog, editorCmd types.EditorCommand) model {
 		{Title: "Status", Width: 15},
 	}
 
-	rows := []table.Row{}
-
-	for i, post := range posts {
-		status := ""
-		if post.Draft {
-			status = "draft"
-		} else {
-			status = "published"
-		}
-		rows = append(rows, table.Row{strconv.Itoa((i + 1)), post.Title, post.Date, status})
-	}
+	rows := formatTableRows(posts)
 
 	textInput := textinput.New()
 	textInput.Width = 20
@@ -66,6 +65,7 @@ func InitialModel(blog hugo.Blog, editorCmd types.EditorCommand) model {
 		nil,
 		false,
 		false,
+		true,
 		true,
 	}
 }
@@ -119,6 +119,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.input.Focus()
 			m.table.Blur()
 			return m, nil
+
+		case "v":
+			if m.draftsOnly {
+				m.table.SetRows(formatTableRows(m.blog.Posts))
+				m.draftsOnly = false
+			} else {
+				m.table.SetRows(formatTableRows(m.blog.DraftPosts()))
+				m.draftsOnly = true
+			}
+
 		}
 
 	case editorFinishedMsg:
@@ -150,5 +160,23 @@ func (m model) startEditor(path string) tea.Cmd {
 	return tea.ExecProcess(editorCmd, func(err error) tea.Msg {
 		return editorFinishedMsg{err}
 	})
+
+}
+
+func formatTableRows(posts []hugo.Post) []table.Row {
+
+	rows := []table.Row{}
+
+	for i, post := range posts {
+		status := ""
+		if post.Draft {
+			status = "draft"
+		} else {
+			status = "published"
+		}
+		rows = append(rows, table.Row{strconv.Itoa((i + 1)), post.Title, post.Date, status})
+	}
+
+	return rows
 
 }
